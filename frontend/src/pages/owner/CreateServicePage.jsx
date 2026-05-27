@@ -36,6 +36,7 @@ export default function CreateServicePage() {
     title: '', description: '', category: 'sitting', price: '',
     petId: '', scheduledStart: '', scheduledEnd: '',
     address: '', latitude: '', longitude: '',
+    isUrgent: false, extraTip: '', photos: [],
   });
 
   useEffect(() => {
@@ -55,6 +56,8 @@ export default function CreateServicePage() {
         latitude: form.latitude ? parseFloat(form.latitude) : null,
         longitude: form.longitude ? parseFloat(form.longitude) : null,
         petId: parseInt(form.petId),
+        extraTip: form.extraTip ? parseFloat(form.extraTip) : null,
+        photos: undefined,
       });
       setCreated(res.data);
       // 推荐匹配的商城接单者
@@ -64,6 +67,22 @@ export default function CreateServicePage() {
       setError(err.response?.data?.error || '发布失败，请重试');
     }
     setSubmitting(false);
+  };
+
+  const handlePhotoUpload = (e) => {
+    const files = Array.from(e.target.files);
+    const readers = files.map(file => new Promise(resolve => {
+      const reader = new FileReader();
+      reader.onload = ev => resolve(ev.target.result);
+      reader.readAsDataURL(file);
+    }));
+    Promise.all(readers).then(results => {
+      setForm(prev => ({ ...prev, photos: [...prev.photos, ...results] }));
+    });
+  };
+
+  const removePhoto = (idx) => {
+    setForm(prev => ({ ...prev, photos: prev.photos.filter((_, i) => i !== idx) }));
   };
 
   const applyTemplate = (tpl) => {
@@ -219,6 +238,36 @@ export default function CreateServicePage() {
                 <label className="block text-sm text-gray-600 mb-1 font-medium">结束时间</label>
                 <input type="datetime-local" value={form.scheduledEnd} onChange={e => setForm({ ...form, scheduledEnd: e.target.value })}
                   className="w-full p-3 border border-green-200 rounded-xl focus:ring-2 focus:ring-green-400 outline-none text-sm" required />
+              </div>
+              <div className="md:col-span-2">
+                <div className="flex items-center gap-4 p-3 bg-yellow-50 rounded-xl">
+                  <label className="flex items-center gap-2 cursor-pointer">
+                    <input type="checkbox" checked={form.isUrgent} onChange={e => setForm({ ...form, isUrgent: e.target.checked })}
+                      className="w-4 h-4" />
+                    <span className="text-sm font-medium text-yellow-700">加急服务</span>
+                  </label>
+                  {form.isUrgent && (
+                    <input placeholder="加急费用 (¥)" type="number" min="0" value={form.extraTip}
+                      onChange={e => setForm({ ...form, extraTip: e.target.value })}
+                      className="w-32 p-2 border border-yellow-300 rounded-xl text-sm" />
+                  )}
+                </div>
+              </div>
+              <div className="md:col-span-2">
+                <label className="block text-sm text-gray-600 mb-1 font-medium">上传照片</label>
+                <input type="file" accept="image/*" multiple onChange={handlePhotoUpload}
+                  className="w-full p-2 border border-green-200 rounded-xl text-sm" />
+                {form.photos.length > 0 && (
+                  <div className="flex flex-wrap gap-2 mt-2">
+                    {form.photos.map((p, i) => (
+                      <div key={i} className="relative">
+                        <img src={p} className="w-16 h-16 object-cover rounded-lg" />
+                        <button type="button" onClick={() => removePhoto(i)}
+                          className="absolute -top-1 -right-1 w-5 h-5 bg-red-500 text-white rounded-full text-xs">✕</button>
+                      </div>
+                    ))}
+                  </div>
+                )}
               </div>
             </div>
             <div className="flex gap-3 mt-6">

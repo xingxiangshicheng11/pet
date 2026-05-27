@@ -70,6 +70,39 @@ export async function acceptService(req, res) {
   }
 }
 
+export async function updateService(req, res) {
+  try {
+    const service = await prisma.serviceListing.findUnique({ where: { id: +req.params.id } });
+    if (!service) return res.status(404).json({ error: "Service not found" });
+    if (service.ownerId !== req.user.id) return res.status(403).json({ error: "Not your service" });
+    if (service.status !== 'OPEN') return res.status(400).json({ error: "Can only edit OPEN services" });
+    const { title, description, category, price, scheduledStart, scheduledEnd, address, latitude, longitude, petId, isUrgent, extraTip } = req.body;
+    const data = {};
+    if (title !== undefined) data.title = title;
+    if (description !== undefined) data.description = description;
+    if (category !== undefined) data.category = category;
+    if (price !== undefined) data.price = price;
+    if (scheduledStart !== undefined) data.scheduledStart = scheduledStart;
+    if (scheduledEnd !== undefined) data.scheduledEnd = scheduledEnd;
+    if (address !== undefined) data.address = address;
+    if (latitude !== undefined) data.latitude = latitude;
+    if (longitude !== undefined) data.longitude = longitude;
+    if (petId !== undefined) data.petId = petId;
+    if (isUrgent !== undefined) data.isUrgent = isUrgent;
+    if (extraTip !== undefined) data.extraTip = extraTip;
+    const updated = await prisma.serviceListing.update({
+      where: { id: +req.params.id },
+      data,
+      include: { owner: { select: { id: true, name: true } }, pet: true, sitter: { select: { id: true, name: true } } },
+    });
+    const io = req.app.get("io");
+    io.to("sitters").emit("service:new", updated);
+    res.json(updated);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+}
+
 export async function updateServiceStatus(req, res) {
   try {
     const { status } = req.body;

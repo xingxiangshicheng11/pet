@@ -57,6 +57,8 @@ model User {
   productOrders    ProductOrder[]
   withdrawals      Withdrawal[]
   emergencyAlerts  EmergencyAlert[]
+  favoriteSitters  FavoriteSitter[] @relation("FavoriteSitters")
+  favoritedBy      FavoriteSitter[] @relation("FavoritedBy")
 }
 
 
@@ -74,7 +76,8 @@ model Pet {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  services ServiceListing[]
+  services       ServiceListing[]
+  medicalRecords MedicalRecord[]
 }
 
 model ServiceProduct {
@@ -239,6 +242,31 @@ model ServicePhoto {
   type      String
   note      String?
   createdAt DateTime        @default(now())
+}
+
+model FavoriteSitter {
+  id        Int      @id @default(autoincrement())
+  ownerId   Int
+  owner     User     @relation("FavoriteSitters", fields: [ownerId], references: [id])
+  sitterId  Int
+  sitter    User     @relation("FavoritedBy", fields: [sitterId], references: [id])
+  createdAt DateTime @default(now())
+
+  @@unique([ownerId, sitterId])
+}
+
+model MedicalRecord {
+  id          Int      @id @default(autoincrement())
+  petId       Int
+  pet         Pet      @relation(fields: [petId], references: [id])
+  type        String   // vaccination, vet_visit, medication, other
+  title       String
+  description String?
+  date        DateTime
+  vetName     String?
+  notes       String?
+  attachment  String?
+  createdAt   DateTime @default(now())
 }
 
 enum PaymentStatus {

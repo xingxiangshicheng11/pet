@@ -30,6 +30,9 @@ export default function MyServicesPage() {
   const [orders, setOrders] = useState([]);
   const [selected, setSelected] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [serviceFilter, setServiceFilter] = useState('all');
+  const [editingService, setEditingService] = useState(null);
+  const [editForm, setEditForm] = useState({});
 
   const uid = parseInt(localStorage.getItem('userId') || '0');
 
@@ -58,6 +61,102 @@ export default function MyServicesPage() {
     }
   };
 
+  const startEdit = (s) => {
+    setEditingService(s);
+    setEditForm({
+      title: s.title,
+      description: s.description || '',
+      category: s.category,
+      price: s.price,
+      scheduledStart: s.scheduledStart ? s.scheduledStart.slice(0, 16) : '',
+      scheduledEnd: s.scheduledEnd ? s.scheduledEnd.slice(0, 16) : '',
+      address: s.address || '',
+      latitude: s.latitude || '',
+      longitude: s.longitude || '',
+    });
+  };
+
+  const saveEdit = async () => {
+    try {
+      const payload = {
+        ...editForm,
+        price: parseFloat(editForm.price),
+        latitude: editForm.latitude ? parseFloat(editForm.latitude) : null,
+        longitude: editForm.longitude ? parseFloat(editForm.longitude) : null,
+        scheduledStart: editForm.scheduledStart + ':00+08:00',
+        scheduledEnd: editForm.scheduledEnd + ':00+08:00',
+      };
+      const res = await api.put('/services/' + editingService.id, payload);
+      setServices(prev => prev.map(s => s.id === editingService.id ? res.data : s));
+      setSelected(prev => prev?.data?.id === editingService.id ? { ...prev, data: res.data } : prev);
+      setEditingService(null);
+    } catch (err) {
+      alert(err.response?.data?.error || '编辑失败');
+    }
+  };
+
+  let filteredServices = services;
+  if (serviceFilter === 'active') filteredServices = services.filter(s => ['OPEN', 'ACCEPTED', 'IN_PROGRESS'].includes(s.status));
+  else if (serviceFilter === 'completed') filteredServices = services.filter(s => s.status === 'COMPLETED');
+  else if (serviceFilter === 'cancelled') filteredServices = services.filter(s => s.status === 'CANCELLED');
+
+  if (editingService) {
+    return (
+      <div>
+        <button onClick={() => setEditingService(null)} className="text-green-600 hover:text-green-700 text-sm mb-4 flex items-center gap-1">← 返回</button>
+        <div className="bg-white p-6 rounded-2xl shadow-sm border border-green-100">
+          <h3 className="font-semibold text-green-800 mb-4">编辑服务</h3>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="md:col-span-2">
+              <label className="block text-sm text-gray-600 mb-1">标题</label>
+              <input value={editForm.title} onChange={e => setEditForm({ ...editForm, title: e.target.value })}
+                className="w-full p-3 border border-green-200 rounded-xl text-sm" />
+            </div>
+            <div className="md:col-span-2">
+              <label className="block text-sm text-gray-600 mb-1">描述</label>
+              <textarea value={editForm.description} onChange={e => setEditForm({ ...editForm, description: e.target.value })}
+                className="w-full p-3 border border-green-200 rounded-xl text-sm" rows="3" />
+            </div>
+            <div>
+              <label className="block text-sm text-gray-600 mb-1">类型</label>
+              <select value={editForm.category} onChange={e => setEditForm({ ...editForm, category: e.target.value })}
+                className="w-full p-3 border border-green-200 rounded-xl text-sm">
+                <option value="sitting">宠物陪伴</option>
+                <option value="walking">遛狗</option>
+                <option value="feeding">喂食</option>
+                <option value="grooming">美容</option>
+              </select>
+            </div>
+            <div>
+              <label className="block text-sm text-gray-600 mb-1">价格 (¥)</label>
+              <input type="number" value={editForm.price} onChange={e => setEditForm({ ...editForm, price: e.target.value })}
+                className="w-full p-3 border border-green-200 rounded-xl text-sm" />
+            </div>
+            <div>
+              <label className="block text-sm text-gray-600 mb-1">开始时间</label>
+              <input type="datetime-local" value={editForm.scheduledStart} onChange={e => setEditForm({ ...editForm, scheduledStart: e.target.value })}
+                className="w-full p-3 border border-green-200 rounded-xl text-sm" />
+            </div>
+            <div>
+              <label className="block text-sm text-gray-600 mb-1">结束时间</label>
+              <input type="datetime-local" value={editForm.scheduledEnd} onChange={e => setEditForm({ ...editForm, scheduledEnd: e.target.value })}
+                className="w-full p-3 border border-green-200 rounded-xl text-sm" />
+            </div>
+            <div className="md:col-span-2">
+              <label className="block text-sm text-gray-600 mb-1">地址</label>
+              <input value={editForm.address} onChange={e => setEditForm({ ...editForm, address: e.target.value })}
+                className="w-full p-3 border border-green-200 rounded-xl text-sm" />
+            </div>
+          </div>
+          <div className="flex gap-3 mt-6">
+            <button onClick={saveEdit} className="bg-green-600 text-white px-6 py-2.5 rounded-xl text-sm font-medium">保存修改</button>
+            <button onClick={() => setEditingService(null)} className="border border-green-300 text-green-600 px-6 py-2.5 rounded-xl text-sm font-medium">取消</button>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   if (selected) {
     const isService = selected.type === 'service';
     const s = selected.data;
@@ -72,13 +171,22 @@ export default function MyServicesPage() {
                 <div className="flex items-center gap-3">
                   <h3 className="font-semibold text-lg text-gray-800">{s.title}</h3>
                   <span className={'text-xs px-3 py-1 rounded-full ' + serviceColorMap[s.status]}>{serviceStatusMap[s.status]}</span>
+                  {s.isUrgent && <span className="text-xs px-2 py-0.5 rounded-full bg-red-50 text-red-600">加急</span>}
                 </div>
-                {(s.status === 'OPEN' || s.status === 'ACCEPTED' || s.status === 'IN_PROGRESS') && (
-                  <button onClick={() => { if (confirm('确认取消该服务？')) updateStatus(s.id, 'CANCELLED'); }}
-                    className="text-red-500 hover:text-red-700 text-xs px-3 py-1.5 rounded-lg border border-red-200 hover:bg-red-50 transition-colors">
-                    退单
-                  </button>
-                )}
+                <div className="flex gap-2">
+                  {s.status === 'OPEN' && (
+                    <button onClick={() => startEdit(s)}
+                      className="text-blue-500 hover:text-blue-700 text-xs px-3 py-1.5 rounded-lg border border-blue-200 hover:bg-blue-50 transition-colors">
+                      编辑
+                    </button>
+                  )}
+                  {(s.status === 'OPEN' || s.status === 'ACCEPTED' || s.status === 'IN_PROGRESS') && (
+                    <button onClick={() => { if (confirm('确认取消该服务？')) updateStatus(s.id, 'CANCELLED'); }}
+                      className="text-red-500 hover:text-red-700 text-xs px-3 py-1.5 rounded-lg border border-red-200 hover:bg-red-50 transition-colors">
+                      退单
+                    </button>
+                  )}
+                </div>
               </div>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
@@ -91,7 +199,7 @@ export default function MyServicesPage() {
                 </div>
                 <div>
                   <p className="text-xs text-gray-400 mb-1">价格</p>
-                  <p className="text-sm font-semibold text-green-700">¥{s.price}</p>
+                  <p className="text-sm font-semibold text-green-700">¥{s.price}{s.extraTip ? <span className="text-yellow-600 ml-2">+ 加急费 ¥{s.extraTip}</span> : ''}</p>
                 </div>
                 <div>
                   <p className="text-xs text-gray-400 mb-1">接单者</p>
@@ -181,28 +289,49 @@ export default function MyServicesPage() {
 
       {tab === 'services' ? (
         <>
-          {services.length === 0 ? (
+          <div className="flex gap-2 mb-4 flex-wrap">
+            {[
+              { key: 'all', label: '全部' },
+              { key: 'active', label: '进行中' },
+              { key: 'completed', label: '已完成' },
+              { key: 'cancelled', label: '已取消' },
+            ].map(f => (
+              <button key={f.key} onClick={() => setServiceFilter(f.key)}
+                className={'px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ' + (serviceFilter === f.key ? 'bg-green-600 text-white' : 'bg-white text-gray-500 border border-green-100')}>
+                {f.label}
+              </button>
+            ))}
+          </div>
+
+          {filteredServices.length === 0 ? (
             <div className="text-center py-16 bg-white rounded-2xl border border-green-100">
               <span className="text-6xl block mb-4">📋</span>
               <p className="text-gray-400">还没有发布过需求</p>
             </div>
           ) : (
             <div className="space-y-4">
-              {services.map(s => (
+              {filteredServices.map(s => (
                 <div key={'svc-' + s.id} className="bg-white p-5 rounded-2xl shadow-sm border border-green-100 flex justify-between items-center cursor-pointer card-hover"
                   onClick={() => setSelected({ type: 'service', data: s })}>
                   <div className="flex-1">
                     <div className="flex items-center gap-2 mb-1">
                       <h3 className="font-semibold text-gray-800">{s.title}</h3>
                       <span className={'text-xs px-2 py-0.5 rounded-full ' + serviceColorMap[s.status]}>{serviceStatusMap[s.status]}</span>
+                      {s.isUrgent && <span className="text-xs px-1.5 py-0.5 rounded bg-red-50 text-red-500">加急</span>}
                     </div>
                     <p className="text-sm text-gray-500">{s.pet?.name} · {s.category} · ¥{s.price}</p>
                     <p className="text-sm text-gray-400">{s.sitter ? '接单者: ' + s.sitter.name : '等待接单中...'}</p>
                   </div>
-                  {(s.status === 'OPEN' || s.status === 'ACCEPTED' || s.status === 'IN_PROGRESS') && (
-                    <button onClick={(e) => { e.stopPropagation(); if (confirm('确认取消？')) updateStatus(s.id, 'CANCELLED'); }}
-                      className="text-red-400 hover:text-red-600 text-sm ml-4 px-3 py-1.5 rounded-lg hover:bg-red-50">取消</button>
-                  )}
+                  <div className="flex gap-2">
+                    {s.status === 'OPEN' && (
+                      <button onClick={(e) => { e.stopPropagation(); startEdit(s); }}
+                        className="text-blue-400 hover:text-blue-600 text-sm px-3 py-1.5 rounded-lg hover:bg-blue-50">编辑</button>
+                    )}
+                    {(s.status === 'OPEN' || s.status === 'ACCEPTED' || s.status === 'IN_PROGRESS') && (
+                      <button onClick={(e) => { e.stopPropagation(); if (confirm('确认取消？')) updateStatus(s.id, 'CANCELLED'); }}
+                        className="text-red-400 hover:text-red-600 text-sm px-3 py-1.5 rounded-lg hover:bg-red-50">取消</button>
+                    )}
+                  </div>
                 </div>
               ))}
             </div>

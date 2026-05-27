@@ -12,6 +12,7 @@ import reviewRoutes from './routes/reviews.js';
 import paymentRoutes from './routes/payments.js';
 import serviceProductRoutes from './routes/serviceProducts.js';
 import sitterRoutes from './routes/sitter.js';
+import ownerRoutes from './routes/owner.js';
 
 const app = express();
 const server = http.createServer(app);
@@ -31,6 +32,7 @@ app.use('/api/reviews', reviewRoutes);
 app.use('/api/payments', paymentRoutes);
 app.use('/api/products', serviceProductRoutes);
 app.use('/api/sitter', sitterRoutes);
+app.use('/api/owner', ownerRoutes);
 
 app.get('/api/health', (req, res) => {
   res.json({ status: 'ok' });
