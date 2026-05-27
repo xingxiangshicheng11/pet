@@ -1,0 +1,249 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id        Int      @id @default(autoincrement())
+  email     String   @unique
+  password  String
+  name      String
+  phone     String?
+  roles     String   @default("OWNER")
+  avatar    String?
+  latitude  Float?
+  longitude Float?
+  address   String?
+  isActive          Boolean   @default(true)
+  bio               String?
+  experience        String?
+  skills            String?
+  rating            Float     @default(0)
+  resetToken        String?
+  resetTokenExpires DateTime?
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
+
+  // New sitter fields
+  gender            String?
+  age               Int?
+  serviceArea       String?
+  serviceTags       String?
+  holidayPrice      Json?
+  distancePrice     Json?
+  certificates      Json?
+  totalServices     Int       @default(0)
+  totalHours        Int       @default(0)
+  receiveEnabled    Boolean   @default(true)
+  maxDistance       Int       @default(20)
+  acceptUrgent      Boolean   @default(true)
+  acceptNight       Boolean   @default(false)
+  walletBalance     Float     @default(0)
+  frozenAmount      Float     @default(0)
+
+  pets             Pet[]
+  servicesListed   ServiceListing[] @relation("OwnerServices")
+  servicesAccepted ServiceListing[] @relation("SitterServices")
+  reviewsGiven     Review[]         @relation("Reviewer")
+  reviewsReceived  Review[]         @relation("Reviewee")
+  messagesSent     Message[]        @relation("Sender")
+  messagesReceived Message[]        @relation("Receiver")
+  notifications    Notification[]
+  serviceProducts  ServiceProduct[]
+  productOrders    ProductOrder[]
+  withdrawals      Withdrawal[]
+  emergencyAlerts  EmergencyAlert[]
+}
+
+
+model Pet {
+  id        Int      @id @default(autoincrement())
+  name      String
+  species   String
+  breed     String?
+  age       Int?
+  weight    Float?
+  photo     String?
+  notes     String?
+  ownerId   Int
+  owner     User     @relation(fields: [ownerId], references: [id])
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  services ServiceListing[]
+}
+
+model ServiceProduct {
+  id          Int      @id @default(autoincrement())
+  title       String
+  description String?
+  category    String
+  price       Float
+  duration    Int      @default(60)
+  isActive    Boolean  @default(true)
+  image       String?
+  sitterId    Int
+  sitter      User     @relation(fields: [sitterId], references: [id])
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  orders      ProductOrder[]
+}
+
+model ProductOrder {
+  id         Int      @id @default(autoincrement())
+  productId  Int
+  product    ServiceProduct @relation(fields: [productId], references: [id])
+  buyerId    Int
+  buyer      User     @relation(fields: [buyerId], references: [id])
+  status     String   @default("PENDING")
+  message    String?
+  scheduledTime DateTime?
+  address    String?
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+  messages   Message[]
+}
+
+model ServiceListing {
+  id             Int           @id @default(autoincrement())
+  title          String
+  description    String?
+  category       String
+  price          Float
+  status         ServiceStatus @default(OPEN)
+  scheduledStart DateTime
+  scheduledEnd   DateTime
+  address        String?
+  latitude       Float?
+  longitude      Float?
+  ownerId        Int
+  owner          User          @relation("OwnerServices", fields: [ownerId], references: [id])
+  sitterId       Int?
+  sitter         User?         @relation("SitterServices", fields: [sitterId], references: [id])
+  petId          Int
+  pet            Pet           @relation(fields: [petId], references: [id])
+  createdAt      DateTime      @default(now())
+  updatedAt      DateTime      @updatedAt
+
+  reviews      Review[]
+  messages     Message[]
+  payments     Payment[]
+  photos       ServicePhoto[]
+  emergencies  EmergencyAlert[] @relation("ServiceEmergencies")
+  
+  // 是否加急、是否夜间服务
+  isUrgent     Boolean  @default(false)
+  extraTip     Float?
+}
+
+enum ServiceStatus {
+  OPEN
+  ACCEPTED
+  IN_PROGRESS
+  WAITING_PAYMENT
+  COMPLETED
+  CANCELLED
+}
+
+model Review {
+  id         Int      @id @default(autoincrement())
+  rating     Int
+  comment    String?
+  orderId    Int
+  order      ServiceListing @relation(fields: [orderId], references: [id])
+  reviewerId Int
+  reviewer   User     @relation("Reviewer", fields: [reviewerId], references: [id])
+  revieweeId Int
+  reviewee   User     @relation("Reviewee", fields: [revieweeId], references: [id])
+  createdAt  DateTime @default(now())
+
+  @@unique([orderId, reviewerId])
+}
+
+model Message {
+  id              Int             @id @default(autoincrement())
+  content         String
+  senderId        Int
+  sender          User            @relation("Sender", fields: [senderId], references: [id])
+  receiverId      Int
+  receiver        User            @relation("Receiver", fields: [receiverId], references: [id])
+  orderId         Int?
+  order           ServiceListing? @relation(fields: [orderId], references: [id])
+  productOrderId  Int?
+  productOrder    ProductOrder?   @relation(fields: [productOrderId], references: [id])
+  readAt          DateTime?
+  createdAt       DateTime        @default(now())
+}
+
+model Notification {
+  id        Int      @id @default(autoincrement())
+  userId    Int
+  user      User     @relation(fields: [userId], references: [id])
+  type      String
+  title     String
+  content   String?
+  read      Boolean  @default(false)
+  link      String?
+  createdAt DateTime @default(now())
+}
+
+model Payment {
+  id            Int           @id @default(autoincrement())
+  orderId       Int
+  order         ServiceListing @relation(fields: [orderId], references: [id])
+  amount        Float
+  method        String
+  status        PaymentStatus @default(PENDING)
+  transactionId String?
+  paidAt        DateTime?
+  createdAt     DateTime      @default(now())
+  updatedAt     DateTime      @updatedAt
+}
+
+model Withdrawal {
+  id          Int      @id @default(autoincrement())
+  userId      Int
+  user        User     @relation(fields: [userId], references: [id])
+  amount      Float
+  status      String   @default("PENDING")
+  accountType String
+  accountInfo String?
+  remark      String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+model EmergencyAlert {
+  id          Int             @id @default(autoincrement())
+  userId      Int
+  user        User            @relation(fields: [userId], references: [id])
+  serviceId   Int?
+  service     ServiceListing? @relation("ServiceEmergencies", fields: [serviceId], references: [id])
+  type        String
+  description String?
+  photos      String?
+  status      String          @default("PENDING")
+  createdAt   DateTime        @default(now())
+}
+
+model ServicePhoto {
+  id        Int             @id @default(autoincrement())
+  serviceId Int
+  service   ServiceListing  @relation(fields: [serviceId], references: [id])
+  url       String
+  type      String
+  note      String?
+  createdAt DateTime        @default(now())
+}
+
+enum PaymentStatus {
+  PENDING
+  COMPLETED
+  FAILED
+  REFUNDED
+}

@@ -1,0 +1,101 @@
+import { PrismaClient } from "@prisma/client";
+const prisma = new PrismaClient();
+
+export async function createService(req, res) {
+  try {
+    const data = { ...req.body, ownerId: req.user.id, status: "OPEN" };
+    const service = await prisma.serviceListing.create({ data, include: { owner: { select: { id: true, name: true } }, pet: true } });
+    const io = req.app.get("io");
+    io.to("sitters").emit("service:new", service);
+    io.to("admin").emit("admin:alert", { type: "service_new", service });
+    res.status(201).json(service);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+}
+
+export async function listServices(req, res) {
+  try {
+    const where = {};
+    if (req.query.status) where.status = req.query.status;
+    if (req.query.ownerId) {
+      where.ownerId = +req.query.ownerId;
+    } else {
+      const userRoles = (req.user.roles || '').split(',');
+      if (userRoles.includes('OWNER') && !userRoles.includes('SITTER') && !req.query.all) {
+        where.ownerId = req.user.id;
+      } else if (userRoles.includes('SITTER') && !userRoles.includes('OWNER') && !req.query.all) {
+        where.status = 'OPEN';
+      }
+    }
+    const services = await prisma.serviceListing.findMany({
+      where, include: { owner: { select: { id: true, name: true, avatar: true } }, pet: true, sitter: { select: { id: true, name: true } } },
+      orderBy: { createdAt: "desc" },
+    });
+    res.json(services);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+}
+
+export async function getService(req, res) {
+  try {
+    const service = await prisma.serviceListing.findUnique({
+      where: { id: +req.params.id },
+      include: { owner: { select: { id: true, name: true, avatar: true, phone: true, bio: true } }, pet: true, sitter: { select: { id: true, name: true, avatar: true, phone: true, bio: true } } },
+    });
+    if (!service) return res.status(404).json({ error: "Service not found" });
+    res.json(service);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+}
+
+export async function acceptService(req, res) {
+  try {
+    const service = await prisma.serviceListing.findUnique({ where: { id: +req.params.id } });
+    if (!service) return res.status(404).json({ error: "Service not found" });
+    if (service.status !== "OPEN") return res.status(400).json({ error: "Service is not available" });
+    const updated = await prisma.serviceListing.update({
+      where: { id: +req.params.id },
+      data: { sitterId: req.user.id, status: "ACCEPTED" },
+      include: { owner: { select: { id: true, name: true } }, pet: true, sitter: { select: { id: true, name: true } } },
+    });
+    const io = req.app.get("io");
+    io.to(`user:${service.ownerId}`).emit("service:accepted", updated);
+    io.to("admin").emit("admin:alert", { type: "service_accepted", service: updated });
+    res.json(updated);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+}
+
+export async function updateServiceStatus(req, res) {
+  try {
+    const { status } = req.body;
+    const service = await prisma.serviceListing.findUnique({ where: { id: +req.params.id } });
+    if (!service) return res.status(404).json({ error: "Service not found" });
+    const userRoles = (req.user.roles || '').split(',');
+    const isAdmin = userRoles.includes('ADMIN');
+    const isOwner = service.ownerId === req.user.id;
+    const isSitter = service.sitterId === req.user.id;
+    if (!isAdmin && !isOwner && !isSitter) {
+      return res.status(403).json({ error: "Forbidden" });
+    }
+    const valid = ["OPEN", "ACCEPTED", "IN_PROGRESS", "WAITING_PAYMENT", "COMPLETED", "CANCELLED"];
+    if (!valid.includes(status)) return res.status(400).json({ error: "Invalid status" });
+    if (status === 'IN_PROGRESS' && service.status !== 'ACCEPTED') return res.status(400).json({ error: "Must be ACCEPTED first" });
+    if (status === 'WAITING_PAYMENT' && service.status !== 'IN_PROGRESS') return res.status(400).json({ error: "Must be IN_PROGRESS first" });
+    const updated = await prisma.serviceListing.update({
+      where: { id: +req.params.id },
+      data: { status },
+      include: { owner: { select: { id: true, name: true } }, pet: true, sitter: { select: { id: true, name: true } } },
+    });
+    const io = req.app.get("io");
+    io.to(`user:${service.ownerId}`).emit("service:status", updated);
+    if (service.sitterId) io.to(`user:${service.sitterId}`).emit("service:status", updated);
+    res.json(updated);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+}
