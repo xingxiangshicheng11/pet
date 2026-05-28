@@ -1,10 +1,12 @@
 import { useEffect } from 'react';
 import { Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
-import { connectSocket, disconnectSocket, joinRoom, joinRoleRoom } from './services/socket';
+import socket, { connectSocket, disconnectSocket, joinRoom, joinRoleRoom } from './services/socket';
 import LoginPage from './pages/login/LoginPage';
 import AdminLoginPage from './pages/login/AdminLoginPage';
 import ForgotPasswordPage from './pages/login/ForgotPasswordPage';
+import LandingPage from './pages/LandingPage';
+import NotFoundPage from './pages/NotFoundPage';
 import OwnerDashboard from './pages/owner/OwnerDashboard';
 import SitterDashboard from './pages/sitter/SitterDashboard';
 import AdminDashboard from './pages/admin/AdminDashboard';
@@ -17,7 +19,16 @@ function SocketInit({ user }) {
     connectSocket(token);
     joinRoom(user.id);
     joinRoleRoom(user.roles);
-    return () => disconnectSocket();
+
+    socket.on('notification', (notif) => {
+      if (notif?.title) {
+        alert('🔔 ' + notif.title + (notif.message ? '\n' + notif.message : ''));
+      }
+    });
+    return () => {
+      socket.off('notification');
+      disconnectSocket();
+    };
   }, [user]);
   return null;
 }
@@ -55,6 +66,7 @@ function AppRoutes() {
     <>
       <SocketInit user={user} />
       <Routes>
+        <Route path="/" element={user ? <Navigate to={defaultPath} /> : <LandingPage />} />
         <Route path="/login" element={user ? <Navigate to={defaultPath} /> : <LoginPage />} />
         <Route path="/admin/login" element={user ? <Navigate to="/admin" /> : <AdminLoginPage />} />
         <Route path="/forgot-password" element={<ForgotPasswordPage />} />
@@ -62,7 +74,7 @@ function AppRoutes() {
         <Route path="/owner/*" element={<ProtectedRoute roles={['OWNER']}><OwnerDashboard /></ProtectedRoute>} />
         <Route path="/sitter/*" element={<ProtectedRoute roles={['SITTER']}><SitterDashboard /></ProtectedRoute>} />
         <Route path="/admin/*" element={<ProtectedRoute roles={['ADMIN']}><AdminDashboard /></ProtectedRoute>} />
-        <Route path="*" element={user ? <Navigate to={defaultPath} /> : <Navigate to="/login" />} />
+        <Route path="*" element={<NotFoundPage />} />
       </Routes>
     </>
   );

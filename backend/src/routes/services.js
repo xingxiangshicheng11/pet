@@ -1,11 +1,12 @@
 import { Router } from "express";
 import { authenticate } from "../middleware/auth.js";
 import { authorize } from "../middleware/role.js";
-import { createService, listServices, getService, acceptService, updateServiceStatus, updateService } from "../controllers/serviceController.js";
+import { createService, listServices, getService, acceptService, updateServiceStatus, updateService, nearbyServices } from "../controllers/serviceController.js";
 
 const router = Router();
 router.use(authenticate);
 
+router.get("/nearby", nearbyServices);
 router.post("/", authorize("OWNER"), createService);
 router.get("/", listServices);
 router.get("/:id", getService);

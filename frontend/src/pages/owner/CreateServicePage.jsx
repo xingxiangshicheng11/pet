@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import api from '../../services/api';
+import LocationPicker from '../../components/LocationPicker';
 
 const serviceTemplates = {
   sitting: [
@@ -46,6 +47,12 @@ export default function CreateServicePage() {
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError('');
+    if (form.scheduledStart && form.scheduledEnd && form.scheduledStart >= form.scheduledEnd) {
+      setError('结束时间必须晚于开始时间'); setSubmitting(false); return;
+    }
+    if (form.scheduledStart && new Date(form.scheduledStart) < new Date()) {
+      setError('开始时间不能早于当前时间'); setSubmitting(false); return;
+    }
     setSubmitting(true);
     try {
       const res = await api.post('/services', {
@@ -71,6 +78,10 @@ export default function CreateServicePage() {
 
   const handlePhotoUpload = (e) => {
     const files = Array.from(e.target.files);
+    const maxSize = 5 * 1024 * 1024; // 5MB
+    for (const f of files) {
+      if (f.size > maxSize) { alert('图片 ' + f.name + ' 超过 5MB 限制'); return; }
+    }
     const readers = files.map(file => new Promise(resolve => {
       const reader = new FileReader();
       reader.onload = ev => resolve(ev.target.result);
@@ -224,10 +235,19 @@ export default function CreateServicePage() {
                   {pets.map(p => <option key={p.id} value={p.id}>{p.name} ({p.species})</option>)}
                 </select>
               </div>
-              <div>
-                <label className="block text-sm text-gray-600 mb-1 font-medium">服务地址</label>
-                <input value={form.address} onChange={e => setForm({ ...form, address: e.target.value })}
-                  className="w-full p-3 border border-green-200 rounded-xl focus:ring-2 focus:ring-green-400 outline-none text-sm" placeholder="请输入地址" />
+              <div className="md:col-span-2">
+                <label className="block text-sm text-gray-600 mb-1 font-medium">服务位置</label>
+                <LocationPicker
+                  latitude={form.latitude ? parseFloat(form.latitude) : null}
+                  longitude={form.longitude ? parseFloat(form.longitude) : null}
+                  address={form.address}
+                  onLocationChange={({ latitude, longitude, address }) => setForm(prev => ({
+                    ...prev,
+                    latitude: latitude != null ? String(latitude) : '',
+                    longitude: longitude != null ? String(longitude) : '',
+                    address: address || '',
+                  }))}
+                />
               </div>
               <div>
                 <label className="block text-sm text-gray-600 mb-1 font-medium">开始时间</label>

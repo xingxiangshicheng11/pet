@@ -6,7 +6,17 @@ const sortOptions = [
   { key: 'newest', label: '最新发布' },
   { key: 'price_asc', label: '价格从低到高' },
   { key: 'price_desc', label: '价格从高到低' },
+  { key: 'distance', label: '距离最近' },
 ];
+
+function calcDistance(lat1, lng1, lat2, lng2) {
+  if (!lat1 || !lng1 || !lat2 || !lng2) return Infinity;
+  const R = 6371;
+  const dLat = (lat2 - lat1) * Math.PI / 180;
+  const dLng = (lng2 - lng1) * Math.PI / 180;
+  const a = Math.sin(dLat / 2) ** 2 + Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) * Math.sin(dLng / 2) ** 2;
+  return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+}
 
 const petTypeLabels = { dog: '狗', cat: '猫', other: '其他' };
 const categoryLabels = { sitting: '宠物陪伴', walking: '遛狗', feeding: '喂食', grooming: '美容', training: '训练' };
@@ -19,12 +29,17 @@ export default function BrowseServicesPage() {
   const [filterPet, setFilterPet] = useState('');
   const [selected, setSelected] = useState(null);
   const [accepting, setAccepting] = useState(false);
+  const [userLoc, setUserLoc] = useState(null);
 
   useEffect(() => {
-    api.get('/services?all=true').then(res => {
-      setServices(res.data);
-      setLoading(false);
-    });
+    api.get('/services?all=true').then(res => setServices(res.data)).finally(() => setLoading(false));
+    if (navigator.geolocation) {
+      navigator.geolocation.getCurrentPosition(
+        (pos) => setUserLoc({ lat: pos.coords.latitude, lng: pos.coords.longitude }),
+        () => {},
+        { enableHighAccuracy: true, timeout: 5000 }
+      );
+    }
   }, []);
 
   useEffect(() => {
@@ -50,9 +65,15 @@ export default function BrowseServicesPage() {
   if (filterCategory) filtered = filtered.filter(s => s.category === filterCategory);
   if (filterPet) filtered = filtered.filter(s => (s.pet?.species || 'other') === filterPet);
 
-  const sorted = [...filtered].sort((a, b) => {
+  const withDist = filtered.map(s => ({
+    ...s,
+    _distance: userLoc && s.latitude && s.longitude ? calcDistance(userLoc.lat, userLoc.lng, s.latitude, s.longitude) : null,
+  }));
+
+  const sorted = [...withDist].sort((a, b) => {
     if (sort === 'price_asc') return a.price - b.price;
     if (sort === 'price_desc') return b.price - a.price;
+    if (sort === 'distance') return (a._distance || Infinity) - (b._distance || Infinity);
     return new Date(b.createdAt) - new Date(a.createdAt);
   });
 
@@ -113,7 +134,7 @@ export default function BrowseServicesPage() {
             </button>
           ) : (
             <div className="bg-green-50 p-4 rounded-xl text-sm text-green-700">
-              已成功接单！前往「<a href="/sitter/jobs" className="underline font-medium">我的服务</a>」查看详情
+              已成功接单！前往「<a href="/sitter/jobs" className="underline font-medium">我的工作</a>」查看详情
             </div>
           )}
         </div>
@@ -125,9 +146,14 @@ export default function BrowseServicesPage() {
 
   return (
     <div>
-      <div className="mb-6">
-        <h2 className="text-xl font-bold text-green-900">浏览需求</h2>
-        <p className="text-sm text-green-600 mt-1">筛选和排序所有待接单的服务</p>
+      <div className="flex items-center justify-between mb-6">
+        <div>
+          <h2 className="text-xl font-bold text-green-900">浏览需求</h2>
+          <p className="text-sm text-green-600 mt-1">筛选和排序所有待接单的服务</p>
+        </div>
+        <a href="/sitter/map" className="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-xl text-sm font-medium transition-colors">
+          🗺️ 地图浏览
+        </a>
       </div>
 
       <div className="flex flex-wrap gap-3 mb-6">
@@ -173,6 +199,7 @@ export default function BrowseServicesPage() {
                 <span className="bg-blue-50 text-blue-600 px-2 py-0.5 rounded-full">{petTypeLabels[s.pet?.species] || s.pet?.species}</span>
                 <span>{s.owner?.name}</span>
                 {s.address && <span>📍 {s.address}</span>}
+                {s._distance != null && s._distance < Infinity && <span>📏 {s._distance.toFixed(1)} km</span>}
               </div>
               {s.description && <p className="text-sm text-gray-500 line-clamp-2">{s.description}</p>}
             </div>

@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import api from '../../services/api';
+import socket from '../../services/socket';
 
 const statusMap = {
   PENDING: { label: '待确认', color: 'bg-yellow-100 text-yellow-700', next: 'CONFIRMED', nextLabel: '确认接单' },
@@ -22,7 +23,11 @@ export default function OrderRequestsPage() {
     } catch { setLoading(false); }
   };
 
-  useEffect(() => { loadOrders(); }, []);
+  useEffect(() => {
+    loadOrders();
+    socket.on('product:ordered', () => { loadOrders(); });
+    return () => socket.off('product:ordered');
+  }, []);
 
   const updateStatus = async (id, status) => {
     try {

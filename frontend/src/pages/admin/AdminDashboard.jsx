@@ -5,11 +5,29 @@ import api from '../../services/api';
 import socket from '../../services/socket';
 import UsersPage from './UsersPage';
 import ServicesPage from './ServicesPage';
+import AdminStatsPage from './AdminStatsPage';
+import AdminWithdrawalsPage from './AdminWithdrawalsPage';
+import AdminEmergenciesPage from './AdminEmergenciesPage';
+import AdminReviewsPage from './AdminReviewsPage';
+import AdminPaymentsPage from './AdminPaymentsPage';
+import AdminProductsPage from './AdminProductsPage';
+import AdminNotificationsPage from './AdminNotificationsPage';
+import AdminSettingsPage from './AdminSettingsPage';
+import AdminLogsPage from './AdminLogsPage';
 
 const navItems = [
   { path: '/admin', label: '系统概览', icon: '📊' },
+  { path: '/admin/stats', label: '数据统计', icon: '📈' },
   { path: '/admin/users', label: '用户管理', icon: '👥' },
   { path: '/admin/services', label: '服务监控', icon: '📋' },
+  { path: '/admin/payments', label: '支付管理', icon: '💳' },
+  { path: '/admin/withdrawals', label: '提现管理', icon: '🏦' },
+  { path: '/admin/products', label: '商品管理', icon: '🏪' },
+  { path: '/admin/emergencies', label: '紧急告警', icon: '🆘' },
+  { path: '/admin/reviews', label: '评价管理', icon: '⭐' },
+  { path: '/admin/notifications', label: '通知广播', icon: '🔔' },
+  { path: '/admin/settings', label: '平台配置', icon: '⚙️' },
+  { path: '/admin/logs', label: '操作日志', icon: '📝' },
 ];
 
 export default function AdminDashboard() {
@@ -18,6 +36,7 @@ export default function AdminDashboard() {
   const loc = useLocation();
   const [alerts, setAlerts] = useState([]);
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [pendingCount, setPendingCount] = useState(0);
 
   useEffect(() => {
     socket.on('admin:alert', (alert) => {
@@ -25,6 +44,10 @@ export default function AdminDashboard() {
     });
     return () => socket.off('admin:alert');
   }, []);
+
+  useEffect(() => {
+    api.get('/admin/withdrawals?status=PENDING').then(r => setPendingCount(r.data.length)).catch(() => {});
+  }, [loc.pathname]);
 
   return (
     <div className="min-h-screen bg-gray-900 flex">
@@ -36,7 +59,7 @@ export default function AdminDashboard() {
           </div>
           <p className="text-gray-400 text-xs">管理员: {user?.name}</p>
         </div>
-        <nav className="flex-1 p-3 space-y-1">
+        <nav className="flex-1 p-3 space-y-1 overflow-y-auto">
           {navItems.map(item => {
             const active = loc.pathname === item.path;
             return (
@@ -44,6 +67,9 @@ export default function AdminDashboard() {
                 className={'w-full text-left px-4 py-3 rounded-xl text-sm flex items-center gap-3 transition-all ' + (active ? 'bg-green-600/20 text-green-400 font-medium' : 'text-gray-400 hover:bg-gray-700 hover:text-gray-200')}>
                 <span>{item.icon}</span>
                 <span>{item.label}</span>
+                {item.path === '/admin/withdrawals' && pendingCount > 0 && (
+                  <span className="ml-auto bg-red-500 text-white text-xs px-2 py-0.5 rounded-full">{pendingCount}</span>
+                )}
                 {active && <span className="ml-auto w-1.5 h-6 bg-green-500 rounded-full" />}
               </button>
             );
@@ -68,8 +94,17 @@ export default function AdminDashboard() {
         <main className="p-4 lg:p-8">
           <Routes>
             <Route index element={<AdminHome alerts={alerts} />} />
+            <Route path="stats" element={<AdminStatsPage />} />
             <Route path="users" element={<UsersPage />} />
             <Route path="services" element={<ServicesPage />} />
+            <Route path="payments" element={<AdminPaymentsPage />} />
+            <Route path="withdrawals" element={<AdminWithdrawalsPage />} />
+            <Route path="products" element={<AdminProductsPage />} />
+            <Route path="emergencies" element={<AdminEmergenciesPage />} />
+            <Route path="reviews" element={<AdminReviewsPage />} />
+            <Route path="notifications" element={<AdminNotificationsPage />} />
+            <Route path="settings" element={<AdminSettingsPage />} />
+            <Route path="logs" element={<AdminLogsPage />} />
           </Routes>
         </main>
       </div>
@@ -80,28 +115,13 @@ export default function AdminDashboard() {
 }
 
 function AdminHome({ alerts }) {
-  const [stats, setStats] = useState({ users: 0, sitters: 0, owners: 0, services: 0, completed: 0, revenue: 0 });
+  const [stats, setStats] = useState(null);
 
   useEffect(() => {
-    const load = async () => {
-      try {
-        const [u, s] = await Promise.all([
-          api.get('/admin/users'),
-          api.get('/services'),
-        ]);
-        const roles = u.data.map(x => (x.roles || x.role || ''));
-        setStats({
-          users: u.data.length,
-          sitters: roles.filter(r => r.includes('SITTER')).length,
-          owners: roles.filter(r => r.includes('OWNER')).length,
-          services: s.data.length,
-          completed: s.data.filter(x => x.status === 'COMPLETED').length,
-          revenue: s.data.filter(x => x.status === 'COMPLETED').reduce((sum, x) => sum + x.price, 0),
-        });
-      } catch {}
-    };
-    load();
+    api.get('/admin/stats/overview').then(res => setStats(res.data)).catch(() => {});
   }, []);
+
+  const pendingAlerts = alerts.filter(a => a.type === 'emergency' || a.type === 'service_new').length;
 
   return (
     <div>
@@ -110,44 +130,72 @@ function AdminHome({ alerts }) {
         <p className="text-gray-400 text-sm mt-1">宠物服务平台运行数据</p>
       </div>
 
-      <div className="grid grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
-        {[
-          { label: '总用户', value: stats.users, icon: '👥', color: 'text-blue-400' },
-          { label: '宠物主', value: stats.owners, icon: '🐱', color: 'text-green-400' },
-          { label: '接单者', value: stats.sitters, icon: '🦮', color: 'text-yellow-400' },
-          { label: '总服务', value: stats.services, icon: '📋', color: 'text-purple-400' },
-          { label: '已完成', value: stats.completed, icon: '✅', color: 'text-green-400' },
-          { label: '总收入', value: '¥' + stats.revenue, icon: '💰', color: 'text-yellow-400' },
-        ].map((item, i) => (
-          <div key={i} className="bg-gray-800 p-5 rounded-2xl border border-gray-700">
-            <div className="flex items-center justify-between mb-3">
-              <span className="text-2xl">{item.icon}</span>
-              <span className={'text-xs px-2 py-1 rounded-full bg-gray-700 ' + item.color}>{item.label}</span>
+      {stats && (
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
+          {[
+            { label: '总用户', value: stats.totalUsers, icon: '👥', color: 'text-blue-400' },
+            { label: '宠物主', value: stats.totalOwners, icon: '🐱', color: 'text-green-400' },
+            { label: '接单者', value: stats.totalSitters, icon: '🦮', color: 'text-yellow-400' },
+            { label: '总服务', value: stats.totalServices, icon: '📋', color: 'text-purple-400' },
+            { label: '已完成', value: stats.completedServices, icon: '✅', color: 'text-green-400' },
+            { label: '总收入', value: '¥' + (stats.totalRevenue || 0).toFixed(0), icon: '💰', color: 'text-yellow-400' },
+            { label: '待处理提现', value: stats.pendingWithdrawals, icon: '🏦', color: 'text-orange-400' },
+            { label: '告警数', value: pendingAlerts, icon: '🔔', color: 'text-red-400' },
+          ].map((item, i) => (
+            <div key={i} className="bg-gray-800 p-5 rounded-2xl border border-gray-700">
+              <div className="flex items-center justify-between mb-3">
+                <span className="text-2xl">{item.icon}</span>
+                <span className={'text-xs px-2 py-1 rounded-full bg-gray-700 ' + item.color}>{item.label}</span>
+              </div>
+              <p className={'text-2xl font-bold ' + item.color}>{item.value}</p>
             </div>
-            <p className={'text-2xl font-bold ' + item.color}>{item.value}</p>
-          </div>
-        ))}
-      </div>
+          ))}
+        </div>
+      )}
 
-      {alerts.length > 0 && (
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        {alerts.length > 0 && (
+          <div className="bg-gray-800 rounded-2xl border border-gray-700 p-5">
+            <h3 className="font-semibold text-white mb-4 flex items-center gap-2">
+              <span>🔔</span> 实时告警 ({alerts.length})
+            </h3>
+            <div className="space-y-2 max-h-60 overflow-y-auto">
+              {alerts.slice(0, 20).map((a, i) => (
+                <div key={i} className="flex items-center gap-3 text-sm bg-gray-700/50 p-3 rounded-xl">
+                  <span className="text-gray-500 w-16 text-xs">{a.time}</span>
+                  <span className={'w-2 h-2 rounded-full ' + (a.type === 'service_new' ? 'bg-green-400' : a.type === 'service_accepted' ? 'bg-yellow-400' : a.type === 'emergency' ? 'bg-red-400' : 'bg-blue-400')} />
+                  <span className="text-gray-300">
+                    {a.type === 'service_new' ? '新服务发布' : a.type === 'service_accepted' ? '服务被接单' : a.type === 'emergency' ? '紧急告警' : a.type}
+                  </span>
+                  {a.service?.title && <span className="text-gray-500 truncate">- {a.service.title}</span>}
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
         <div className="bg-gray-800 rounded-2xl border border-gray-700 p-5">
           <h3 className="font-semibold text-white mb-4 flex items-center gap-2">
-            <span>🔔</span> 实时告警 ({alerts.length})
+            <span>⚡</span> 快捷入口
           </h3>
-          <div className="space-y-2 max-h-60 overflow-y-auto">
-            {alerts.map((a, i) => (
-              <div key={i} className="flex items-center gap-3 text-sm bg-gray-700/50 p-3 rounded-xl">
-                <span className="text-gray-400 w-16 text-xs">{a.time}</span>
-                <span className={'w-2 h-2 rounded-full ' + (a.type === 'service_new' ? 'bg-green-400' : a.type === 'service_accepted' ? 'bg-yellow-400' : 'bg-blue-400')} />
-                <span className="text-gray-300">
-                  {a.type === 'service_new' ? '新服务发布' : a.type === 'service_accepted' ? '服务被接单' : a.type}
-                </span>
-                {a.service?.title && <span className="text-gray-500">- {a.service.title}</span>}
-              </div>
+          <div className="grid grid-cols-2 gap-3">
+            {[
+              { path: '/admin/users', label: '用户管理', icon: '👥' },
+              { path: '/admin/services', label: '服务监控', icon: '📋' },
+              { path: '/admin/withdrawals', label: '提现审核', icon: '🏦' },
+              { path: '/admin/emergencies', label: '紧急告警', icon: '🆘' },
+              { path: '/admin/stats', label: '数据统计', icon: '📈' },
+              { path: '/admin/notifications', label: '通知广播', icon: '🔔' },
+            ].map(item => (
+              <button key={item.path} onClick={() => navigate(item.path)}
+                className="p-4 bg-gray-700/50 rounded-xl text-center hover:bg-gray-700 transition-colors">
+                <span className="text-2xl block mb-1">{item.icon}</span>
+                <span className="text-sm text-gray-300">{item.label}</span>
+              </button>
             ))}
           </div>
         </div>
-      )}
+      </div>
     </div>
   );
 }

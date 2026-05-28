@@ -29,6 +29,14 @@ export default function MarketplacePage() {
   const [buying, setBuying] = useState(false);
   const [showSitter, setShowSitter] = useState(null);
   const [search, setSearch] = useState('');
+  const [favorites, setFavorites] = useState(new Set());
+
+  useEffect(() => {
+    api.get('/owner/favorites').then(res => {
+      const set = new Set(res.data.map(f => f.sitter?.id));
+      setFavorites(set);
+    }).catch(() => {});
+  }, []);
 
   useEffect(() => {
     const params = new URLSearchParams();
@@ -46,6 +54,21 @@ export default function MarketplacePage() {
   else if (sort === 'price_desc') sorted.sort((a, b) => b.price - a.price);
   else if (sort === 'rating') sorted.sort((a, b) => (b.sitter?.rating || 0) - (a.sitter?.rating || 0));
   else sorted.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+
+  const toggleFav = async (e, sitterId) => {
+    e.stopPropagation();
+    try {
+      if (favorites.has(sitterId)) {
+        const favs = await api.get('/owner/favorites');
+        const found = favs.data.find(f => f.sitter?.id === sitterId);
+        if (found) await api.delete('/owner/favorites/' + found.id);
+        setFavorites(prev => { const n = new Set(prev); n.delete(sitterId); return n; });
+      } else {
+        await api.post('/owner/favorites', { sitterId });
+        setFavorites(prev => { const n = new Set(prev); n.add(sitterId); return n; });
+      }
+    } catch {}
+  };
 
   const handleBuy = async (productId) => {
     setBuying(true);
@@ -207,8 +230,14 @@ export default function MarketplacePage() {
                         <span className="text-xs text-yellow-500">{'⭐'.repeat(Math.round(p.sitter.rating || 0)) || '新'}</span>
                       </div>
                     </div>
-                    <button onClick={(e) => { e.stopPropagation(); setShowSitter(p.sitter.id); }}
-                      className="text-xs text-green-600 hover:text-green-700 underline">简历</button>
+                    <div className="flex items-center gap-1">
+                      <button onClick={(e) => toggleFav(e, p.sitter.id)}
+                        className={'text-lg ' + (favorites.has(p.sitter.id) ? 'text-yellow-500' : 'text-gray-300 hover:text-yellow-400')}>
+                        {favorites.has(p.sitter.id) ? '⭐' : '☆'}
+                      </button>
+                      <button onClick={(e) => { e.stopPropagation(); setShowSitter(p.sitter.id); }}
+                        className="text-xs text-green-600 hover:text-green-700 underline">简历</button>
+                    </div>
                   </div>
                 </div>
               </div>

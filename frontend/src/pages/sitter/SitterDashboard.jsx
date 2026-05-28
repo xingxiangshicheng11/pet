@@ -4,16 +4,19 @@ import { useAuth } from '../../contexts/AuthContext';
 import api from '../../services/api';
 import SitterHome from './SitterHome';
 import BrowseServicesPage from './BrowseServicesPage';
+import MapBrowsePage from './MapBrowsePage';
 import SitterOrdersPage from './SitterOrdersPage';
 import SitterProfilePage from './SitterProfilePage';
 import SitterWalletPage from './SitterWalletPage';
 import SitterMessagesPage from './SitterMessagesPage';
 import SitterSettingsPage from './SitterSettingsPage';
 import SitterDashboardDataPage from './SitterDashboardDataPage';
+import MyJobsPage from './MyJobsPage';
 
 const navItems = [
   { path: '/sitter', label: '工作台', icon: '📊' },
   { path: '/sitter/browse', label: '浏览订单', icon: '🔍' },
+  { path: '/sitter/map', label: '地图浏览', icon: '🗺️' },
   { path: '/sitter/orders', label: '我的订单', icon: '📋' },
   { path: '/sitter/wallet', label: '我的钱包', icon: '💰' },
   { path: '/sitter/messages', label: '消息', icon: '💬' },
@@ -90,10 +93,12 @@ export default function SitterDashboard() {
           <Routes>
             <Route index element={<SitterHome />} />
             <Route path="browse" element={<BrowseServicesPage />} />
+            <Route path="map" element={<MapBrowsePage />} />
             <Route path="orders" element={<SitterOrdersPage />} />
             <Route path="profile" element={<SitterProfilePage />} />
             <Route path="wallet" element={<SitterWalletPage />} />
             <Route path="messages" element={<SitterMessagesPage />} />
+            <Route path="jobs" element={<MyJobsPage />} />
             <Route path="settings" element={<SitterSettingsPage />} />
             <Route path="dashboard" element={<SitterDashboardDataPage />} />
           </Routes>

@@ -59,6 +59,10 @@ model User {
   emergencyAlerts  EmergencyAlert[]
   favoriteSitters  FavoriteSitter[] @relation("FavoriteSitters")
   favoritedBy      FavoriteSitter[] @relation("FavoritedBy")
+  withdrawalReviews Withdrawal[]   @relation("WithdrawalReviewer")
+  handledEmergencies EmergencyAlert[] @relation("EmergencyHandler")
+  adminLogs          AdminLog[]
+  sentNotifications  SystemNotification[]
 }
 
 
@@ -217,6 +221,10 @@ model Withdrawal {
   accountType String
   accountInfo String?
   remark      String?
+  reviewedBy  Int?
+  reviewer    User?    @relation("WithdrawalReviewer", fields: [reviewedBy], references: [id])
+  reviewedAt  DateTime?
+  rejectReason String?
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 }
@@ -231,6 +239,10 @@ model EmergencyAlert {
   description String?
   photos      String?
   status      String          @default("PENDING")
+  handledBy   Int?
+  handler     User?           @relation("EmergencyHandler", fields: [handledBy], references: [id])
+  handledAt   DateTime?
+  handlingNote String?
   createdAt   DateTime        @default(now())
 }
 
@@ -267,6 +279,35 @@ model MedicalRecord {
   notes       String?
   attachment  String?
   createdAt   DateTime @default(now())
+}
+
+model AdminLog {
+  id        Int      @id @default(autoincrement())
+  adminId   Int
+  admin     User     @relation(fields: [adminId], references: [id])
+  action    String
+  targetType String
+  targetId  Int?
+  detail    String?
+  createdAt DateTime @default(now())
+}
+
+model SystemNotification {
+  id        Int      @id @default(autoincrement())
+  title     String
+  content   String?
+  targetRole String?
+  sentBy    Int
+  sender    User     @relation(fields: [sentBy], references: [id])
+  createdAt DateTime @default(now())
+}
+
+model PlatformConfig {
+  id          Int      @id @default(autoincrement())
+  key         String   @unique
+  value       String
+  description String?
+  updatedAt   DateTime @updatedAt
 }
 
 enum PaymentStatus {

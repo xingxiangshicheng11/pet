@@ -8,7 +8,7 @@ export default function LoginPage() {
   const navigate = useNavigate();
   const [isRegister, setIsRegister] = useState(false);
   const [form, setForm] = useState({
-    email: '', password: '', name: '', phone: '',
+    email: '', password: '', confirmPassword: '', name: '', phone: '',
     roles: [],
   });
   const [error, setError] = useState('');
@@ -23,6 +23,11 @@ export default function LoginPage() {
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError('');
+    if (isRegister) {
+      if (form.password.length < 6) { setError('密码至少6位'); return; }
+      if (form.password !== form.confirmPassword) { setError('两次密码不一致'); return; }
+      if (form.phone && !/^1\d{10}$/.test(form.phone)) { setError('手机号格式不正确'); return; }
+    }
     try {
       const payload = { email: form.email, password: form.password };
       if (isRegister) {
@@ -66,15 +71,21 @@ export default function LoginPage() {
               onChange={e => setForm({ ...form, email: e.target.value })}
               className="w-full p-3 border border-green-200 rounded-xl focus:ring-2 focus:ring-green-400 focus:border-green-400 outline-none text-sm" required />
           </div>
-          <div>
-            <label className="block text-sm text-green-700 mb-1 font-medium">密码</label>
-            <input type="password" value={form.password}
-              onChange={e => setForm({ ...form, password: e.target.value })}
-              className="w-full p-3 border border-green-200 rounded-xl focus:ring-2 focus:ring-green-400 focus:border-green-400 outline-none text-sm" required />
-          </div>
+              <div>
+                <label className="block text-sm text-green-700 mb-1 font-medium">密码</label>
+                <input type="password" value={form.password} minLength={6}
+                  onChange={e => setForm({ ...form, password: e.target.value })}
+                  className="w-full p-3 border border-green-200 rounded-xl focus:ring-2 focus:ring-green-400 focus:border-green-400 outline-none text-sm" required />
+              </div>
 
           {isRegister && (
             <>
+              <div>
+                <label className="block text-sm text-green-700 mb-1 font-medium">确认密码</label>
+                <input type="password" value={form.confirmPassword}
+                  onChange={e => setForm({ ...form, confirmPassword: e.target.value })}
+                  className="w-full p-3 border border-green-200 rounded-xl focus:ring-2 focus:ring-green-400 outline-none text-sm" required />
+              </div>
               <div>
                 <label className="block text-sm text-green-700 mb-1 font-medium">姓名</label>
                 <input type="text" value={form.name}

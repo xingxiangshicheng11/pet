@@ -103,6 +103,48 @@ export async function updateService(req, res) {
   }
 }
 
+export async function nearbyServices(req, res) {
+  try {
+    const { lat, lng, radius } = req.query;
+    const userLat = parseFloat(lat);
+    const userLng = parseFloat(lng);
+    const searchRadius = parseFloat(radius) || 50;
+
+    if (!lat || !lng || isNaN(userLat) || isNaN(userLng)) {
+      return res.status(400).json({ error: "lat and lng query params required" });
+    }
+
+    const services = await prisma.$queryRawUnsafe(`
+      SELECT id, title, description, category, price, status,
+        "scheduledStart", "scheduledEnd", address, latitude, longitude,
+        "isUrgent", "extraTip", "createdAt",
+        "ownerId", "petId", "sitterId",
+        (6371 * acos(
+          cos(radians($1)) * cos(radians(latitude)) *
+          cos(radians(longitude) - radians($2)) +
+          sin(radians($1)) * sin(radians(latitude))
+        )) AS distance
+      FROM "ServiceListing"
+      WHERE latitude IS NOT NULL AND longitude IS NOT NULL AND status = 'OPEN'
+      HAVING distance < $3
+      ORDER BY distance
+    `, userLat, userLng, searchRadius);
+
+    const enriched = await Promise.all(services.map(async (s) => {
+      const owner = await prisma.user.findUnique({
+        where: { id: s.ownerId },
+        select: { id: true, name: true, avatar: true },
+      });
+      const pet = s.petId ? await prisma.pet.findUnique({ where: { id: s.petId } }) : null;
+      return { ...s, distance: Math.round(s.distance * 100) / 100, owner, pet };
+    }));
+
+    res.json(enriched);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+}
+
 export async function updateServiceStatus(req, res) {
   try {
     const { status } = req.body;

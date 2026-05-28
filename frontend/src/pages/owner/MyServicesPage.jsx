@@ -44,11 +44,21 @@ export default function MyServicesPage() {
   }, []);
 
   useEffect(() => {
+    socket.on('service:accepted', svc => {
+      setServices(prev => prev.map(s => s.id === svc.id ? svc : s));
+    });
     socket.on('service:status', svc => {
       setServices(prev => prev.map(s => s.id === svc.id ? svc : s));
       setSelected(prev => prev?.data?.id === svc.id ? { ...prev, data: svc } : prev);
     });
-    return () => socket.off('service:status');
+    socket.on('order:status', (order) => {
+      setOrders(prev => prev.map(o => o.id === order.id ? order : o));
+    });
+    return () => {
+      socket.off('service:accepted');
+      socket.off('service:status');
+      socket.off('order:status');
+    };
   }, []);
 
   const updateStatus = async (id, status) => {

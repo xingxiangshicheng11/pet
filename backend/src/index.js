@@ -2,6 +2,7 @@ import express from 'express';
 import http from 'http';
 import { Server } from 'socket.io';
 import cors from 'cors';
+import jwt from 'jsonwebtoken';
 import config from './config/index.js';
 import authRoutes from './routes/auth.js';
 import petRoutes from './routes/pets.js';
@@ -38,16 +39,30 @@ app.get('/api/health', (req, res) => {
   res.json({ status: 'ok' });
 });
 
+io.use((socket, next) => {
+  const token = socket.handshake.auth?.token;
+  if (!token) return next(new Error('Authentication required'));
+  try {
+    socket.user = jwt.verify(token, config.jwtSecret);
+    next();
+  } catch {
+    next(new Error('Invalid token'));
+  }
+});
+
 io.on('connection', (socket) => {
-  console.log('Client connected:', socket.id);
+  console.log('Client connected:', socket.id, 'user:', socket.user?.id);
 
   socket.on('join', (userId) => {
-    socket.join('user:' + userId);
+    if (socket.user?.id == userId) {
+      socket.join('user:' + userId);
+    }
   });
 
   socket.on('joinRole', (role) => {
-    if (role === 'SITTER') socket.join('sitters');
-    if (role === 'ADMIN') socket.join('admin');
+    const userRoles = (socket.user?.roles || '').split(',');
+    if (role === 'SITTER' && userRoles.includes('SITTER')) socket.join('sitters');
+    if (role === 'ADMIN' && userRoles.includes('ADMIN')) socket.join('admin');
   });
 
   socket.on('disconnect', () => {

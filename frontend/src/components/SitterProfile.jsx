@@ -6,13 +6,33 @@ export default function SitterProfile({ userId, showBack }) {
   const navigate = useNavigate();
   const [profile, setProfile] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [isFav, setIsFav] = useState(false);
+  const [favId, setFavId] = useState(null);
 
   useEffect(() => {
     api.get('/auth/profile/' + userId).then(res => {
       setProfile(res.data);
       setLoading(false);
     }).catch(() => setLoading(false));
+    api.get('/owner/favorites').then(res => {
+      const found = res.data.find(f => f.sitter?.id === userId);
+      if (found) { setIsFav(true); setFavId(found.id); }
+    }).catch(() => {});
   }, [userId]);
+
+  const toggleFav = async () => {
+    try {
+      if (isFav && favId) {
+        await api.delete('/owner/favorites/' + favId);
+        setIsFav(false); setFavId(null);
+      } else {
+        const res = await api.post('/owner/favorites', { sitterId: userId });
+        setIsFav(true); setFavId(res.data.id);
+      }
+    } catch (err) {
+      alert(err.response?.data?.error || '操作失败');
+    }
+  };
 
   if (loading) return <div className="text-center py-8"><div className="w-8 h-8 border-4 border-green-200 border-t-green-600 rounded-full animate-spin mx-auto" /></div>;
   if (!profile) return <p className="text-gray-400 text-center py-4">用户信息未找到</p>;
@@ -22,13 +42,19 @@ export default function SitterProfile({ userId, showBack }) {
       {showBack && (
         <button onClick={() => navigate(-1)} className="text-green-600 hover:text-green-700 text-sm mb-4 flex items-center gap-1">← 返回</button>
       )}
-      <div className="flex items-center gap-4 mb-6">
-        <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center text-2xl font-bold text-green-700">
+      <div className="flex items-start gap-4 mb-6">
+        <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center text-2xl font-bold text-green-700 flex-shrink-0">
           {profile.name?.charAt(0)}
         </div>
-        <div>
-          <h3 className="font-semibold text-lg text-gray-800">{profile.name}</h3>
-          <div className="flex items-center gap-2 text-sm text-gray-500">
+        <div className="flex-1">
+          <div className="flex items-center justify-between">
+            <h3 className="font-semibold text-lg text-gray-800">{profile.name}</h3>
+            <button onClick={toggleFav}
+              className={'text-lg px-3 py-1 rounded-lg text-sm transition-colors ' + (isFav ? 'text-yellow-500 bg-yellow-50' : 'text-gray-300 hover:text-yellow-400 bg-gray-50 hover:bg-yellow-50')}>
+              {isFav ? '⭐ 已收藏' : '☆ 收藏'}
+            </button>
+          </div>
+          <div className="flex items-center gap-2 text-sm text-gray-500 mt-1">
             <span>{'⭐'.repeat(Math.round(profile.rating || 0)) || '暂无评分'}</span>
             <span>· {profile.reviews?.length || 0} 条评价</span>
           </div>

@@ -53,7 +53,7 @@ export default function SitterOrdersPage() {
 
   const updateStatus = async (id, status) => {
     try {
-      const res = await api.put('/services/' + id + '/status', { status });
+      const res = await api.patch('/services/' + id + '/status', { status });
       setServices(prev => prev.map(s => s.id === id ? res.data : s));
       setSelected(res.data);
     } catch (err) {
@@ -64,7 +64,7 @@ export default function SitterOrdersPage() {
   const cancelOrder = async (id) => {
     if (!confirm('确认取消此订单？')) return;
     try {
-      const res = await api.put('/services/' + id + '/status', { status: 'CANCELLED' });
+      const res = await api.patch('/services/' + id + '/status', { status: 'CANCELLED' });
       setServices(prev => prev.map(s => s.id === id ? res.data : s));
       setSelected(res.data);
     } catch (err) {
