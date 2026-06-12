@@ -3,6 +3,19 @@ import api from '../services/api';
 
 const AuthContext = createContext(null);
 
+function storeTokens(data) {
+  localStorage.setItem('token', data.accessToken);
+  localStorage.setItem('refreshToken', data.refreshToken);
+  localStorage.setItem('userId', String(data.user.id));
+}
+
+function clearTokens() {
+  localStorage.removeItem('token');
+  localStorage.removeItem('refreshToken');
+  localStorage.removeItem('userId');
+  localStorage.removeItem('currentRole');
+}
+
 export function AuthProvider({ children }) {
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -20,7 +33,7 @@ export function AuthProvider({ children }) {
           localStorage.setItem('currentRole', firstRole);
         }
       }).catch(() => {
-        localStorage.removeItem('token');
+        clearTokens();
       }).finally(() => setLoading(false));
     } else {
       setLoading(false);
@@ -29,8 +42,7 @@ export function AuthProvider({ children }) {
 
   const login = async (email, password) => {
     const res = await api.post('/auth/login', { email, password });
-    localStorage.setItem('token', res.data.token);
-    localStorage.setItem('userId', String(res.data.user.id));
+    storeTokens(res.data);
     const roles = res.data.user.roles || 'OWNER';
     const firstRole = roles.split(',')[0];
     setCurrentRole(firstRole);
@@ -41,8 +53,7 @@ export function AuthProvider({ children }) {
 
   const register = async (data) => {
     const res = await api.post('/auth/register', data);
-    localStorage.setItem('token', res.data.token);
-    localStorage.setItem('userId', String(res.data.user.id));
+    storeTokens(res.data);
     const roles = res.data.user.roles || 'OWNER';
     const firstRole = roles.split(',')[0];
     setCurrentRole(firstRole);
@@ -52,9 +63,7 @@ export function AuthProvider({ children }) {
   };
 
   const logout = () => {
-    localStorage.removeItem('token');
-    localStorage.removeItem('currentRole');
-    localStorage.removeItem('userId');
+    clearTokens();
     setUser(null);
     setCurrentRole('');
   };

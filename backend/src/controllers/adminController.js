@@ -160,18 +160,21 @@ export async function adminAssignSitter(req, res) {
     if (!sitterId) return res.status(400).json({ error: 'sitterId required' });
     const sitter = await prisma.user.findUnique({ where: { id: +sitterId } });
     if (!sitter || !sitter.roles.includes('SITTER')) return res.status(400).json({ error: 'Invalid sitter' });
-    const service = await prisma.serviceListing.findUnique({ where: { id: +req.params.id } });
-    if (!service) return res.status(404).json({ error: 'Service not found' });
-    if (service.status !== 'OPEN') return res.status(400).json({ error: 'Service is not OPEN' });
-    const updated = await prisma.serviceListing.update({
-      where: { id: +req.params.id },
+    const result = await prisma.serviceListing.updateMany({
+      where: { id: +req.params.id, status: 'OPEN' },
       data: { sitterId: +sitterId, status: 'ACCEPTED' },
+    });
+    if (result.count === 0) {
+      return res.status(400).json({ error: 'Service is not OPEN' });
+    }
+    const updated = await prisma.serviceListing.findUnique({
+      where: { id: +req.params.id },
       include: { owner: { select: { name: true } }, sitter: { select: { name: true } } },
     });
     const io = req.app.get('io');
-    io.to('user:' + service.ownerId).emit('service:accepted', updated);
+    io.to('user:' + updated.ownerId).emit('service:accepted', updated);
     io.to('user:' + sitterId).emit('service:accepted', updated);
-    await log(req.user.id, 'assign_sitter', 'ServiceListing', service.id, 'Assigned sitter: ' + sitter.name);
+    await log(req.user.id, 'assign_sitter', 'ServiceListing', updated.id, 'Assigned sitter: ' + sitter.name);
     res.json(updated);
   } catch (err) {
     res.status(500).json({ error: err.message });
@@ -290,19 +293,32 @@ export async function adminReviewWithdrawal(req, res) {
   try {
     const { action, rejectReason } = req.body;
     if (!['APPROVED', 'REJECTED'].includes(action)) return res.status(400).json({ error: 'Invalid action' });
-    const withdrawal = await prisma.withdrawal.findUnique({ where: { id: +req.params.id }, include: { user: true } });
-    if (!withdrawal) return res.status(404).json({ error: 'Withdrawal not found' });
-    if (withdrawal.status !== 'PENDING') return res.status(400).json({ error: 'Already processed' });
-    const data = { status: action, reviewedBy: req.user.id, reviewedAt: new Date() };
-    if (action === 'REJECTED') {
-      if (!rejectReason) return res.status(400).json({ error: 'Reject reason required' });
-      data.rejectReason = rejectReason;
-      await prisma.user.update({ where: { id: withdrawal.userId }, data: { walletBalance: { increment: withdrawal.amount }, frozenAmount: { decrement: withdrawal.amount } } });
-    }
-    const updated = await prisma.withdrawal.update({ where: { id: +req.params.id }, data });
-    await log(req.user.id, action === 'APPROVED' ? 'approve_withdrawal' : 'reject_withdrawal', 'Withdrawal', withdrawal.id, 'Amount: ' + withdrawal.amount);
-    res.json(updated);
+    if (action === 'REJECTED' && !rejectReason) return res.status(400).json({ error: 'Reject reason required' });
+    const result = await prisma.$transaction(async (tx) => {
+      const r = await tx.withdrawal.updateMany({
+        where: { id: +req.params.id, status: 'PENDING' },
+        data: { status: action, reviewedBy: req.user.id, reviewedAt: new Date(), ...(action === 'REJECTED' ? { rejectReason } : {}) },
+      });
+      if (r.count === 0) {
+        const exists = await tx.withdrawal.findUnique({ where: { id: +req.params.id }, select: { id: true } });
+        if (!exists) throw new Error('Withdrawal not found');
+        throw new Error('Already processed');
+      }
+      if (action === 'REJECTED') {
+        const w = await tx.withdrawal.findUnique({ where: { id: +req.params.id } });
+        await tx.user.update({
+          where: { id: w.userId },
+          data: { walletBalance: { increment: w.amount }, frozenAmount: { decrement: w.amount } },
+        });
+      }
+      return tx.withdrawal.findUnique({ where: { id: +req.params.id } });
+    });
+    await log(req.user.id, action === 'APPROVED' ? 'approve_withdrawal' : 'reject_withdrawal', 'Withdrawal', result.id, 'Amount: ' + result.amount);
+    res.json(result);
   } catch (err) {
+    if (err.message === 'Withdrawal not found') return res.status(404).json({ error: err.message });
+    if (err.message === 'Already processed') return res.status(400).json({ error: err.message });
+    if (err.message === 'Reject reason required') return res.status(400).json({ error: err.message });
     res.status(500).json({ error: err.message });
   }
 }
@@ -330,11 +346,16 @@ export async function adminHandleEmergency(req, res) {
     const { handlingNote, status } = req.body;
     const valid = ['PENDING', 'RESOLVED', 'DISMISSED'];
     if (status && !valid.includes(status)) return res.status(400).json({ error: 'Invalid status' });
-    const data = { handledBy: req.user.id, handledAt: new Date() };
+    const data = { handledBy: req.user.id, handledAt: new Date(), status: status || 'RESOLVED' };
     if (handlingNote) data.handlingNote = handlingNote;
-    if (status) data.status = status;
-    else data.status = 'RESOLVED';
-    const updated = await prisma.emergencyAlert.update({ where: { id: +req.params.id }, data });
+    const result = await prisma.emergencyAlert.updateMany({
+      where: { id: +req.params.id, status: 'PENDING' },
+      data,
+    });
+    if (result.count === 0) {
+      return res.status(400).json({ error: 'Emergency already handled or not found' });
+    }
+    const updated = await prisma.emergencyAlert.findUnique({ where: { id: +req.params.id } });
     await log(req.user.id, 'handle_emergency', 'EmergencyAlert', updated.id, 'Status: ' + updated.status);
     res.json(updated);
   } catch (err) {

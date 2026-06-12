@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { Link } from 'react-router-dom';
 import api from '../../services/api';
 import SitterProfile from '../../components/SitterProfile';
@@ -19,6 +19,17 @@ const sortOptions = [
   { key: 'rating', label: '好评优先' },
 ];
 
+function ReviewStars({ avg, count }) {
+  if (!count) return <span className="text-xs text-gray-400">暂无评价</span>;
+  const full = Math.round(avg);
+  return (
+    <span className="text-xs text-yellow-500">
+      {'★'.repeat(full)}{'☆'.repeat(5 - full)}
+      <span className="text-gray-400 ml-1">({count})</span>
+    </span>
+  );
+}
+
 export default function MarketplacePage() {
   const [products, setProducts] = useState([]);
   const [category, setCategory] = useState('');
@@ -27,9 +38,15 @@ export default function MarketplacePage() {
   const [selected, setSelected] = useState(null);
   const [buyForm, setBuyForm] = useState({ message: '', scheduledTime: '', address: '' });
   const [buying, setBuying] = useState(false);
+  const [showPasswordModal, setShowPasswordModal] = useState(false);
+  const [buyPassword, setBuyPassword] = useState('');
+  const [buyError, setBuyError] = useState('');
   const [showSitter, setShowSitter] = useState(null);
   const [search, setSearch] = useState('');
   const [favorites, setFavorites] = useState(new Set());
+  const [sitterReviews, setSitterReviews] = useState([]);
+  const [reviewsLoading, setReviewsLoading] = useState(false);
+  const searchTimer = useRef(null);
 
   useEffect(() => {
     api.get('/owner/favorites').then(res => {
@@ -39,20 +56,25 @@ export default function MarketplacePage() {
   }, []);
 
   useEffect(() => {
-    const params = new URLSearchParams();
-    if (category) params.set('category', category);
-    params.set('all', 'true');
-    api.get('/products?' + params.toString()).then(res => {
-      setProducts(res.data);
-      setLoading(false);
-    }).catch(() => setLoading(false));
-  }, [category]);
+    setLoading(true);
+    if (searchTimer.current) clearTimeout(searchTimer.current);
+    searchTimer.current = setTimeout(() => {
+      const params = new URLSearchParams();
+      if (category) params.set('category', category);
+      if (search) params.set('search', search);
+      params.set('all', 'true');
+      api.get('/products?' + params.toString()).then(res => {
+        setProducts(res.data);
+        setLoading(false);
+      }).catch(() => setLoading(false));
+    }, 300);
+    return () => { if (searchTimer.current) clearTimeout(searchTimer.current); };
+  }, [category, search]);
 
   let sorted = [...products];
-  if (search) sorted = sorted.filter(p => (p.sitter?.name || '').toLowerCase().includes(search.toLowerCase()));
   if (sort === 'price_asc') sorted.sort((a, b) => a.price - b.price);
   else if (sort === 'price_desc') sorted.sort((a, b) => b.price - a.price);
-  else if (sort === 'rating') sorted.sort((a, b) => (b.sitter?.rating || 0) - (a.sitter?.rating || 0));
+  else if (sort === 'rating') sorted.sort((a, b) => (b.sitter?.reviewAvg || 0) - (a.sitter?.reviewAvg || 0));
   else sorted.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
 
   const toggleFav = async (e, sitterId) => {
@@ -70,15 +92,38 @@ export default function MarketplacePage() {
     } catch {}
   };
 
-  const handleBuy = async (productId) => {
-    setBuying(true);
+  const loadReviews = async (sitterId) => {
+    setReviewsLoading(true);
     try {
-      await api.post('/products/buy', { productId, ...buyForm });
+      const res = await api.get('/reviews/user/' + sitterId);
+      setSitterReviews(res.data);
+    } catch {}
+    setReviewsLoading(false);
+  };
+
+  const handleSelect = (product) => {
+    setSelected(product);
+    loadReviews(product.sitter.id);
+  };
+
+  const handleBuy = async () => {
+    setShowPasswordModal(true);
+    setBuyPassword('');
+    setBuyError('');
+  };
+
+  const confirmBuy = async () => {
+    if (!buyPassword) { setBuyError('请输入当前密码'); return; }
+    setBuying(true);
+    setBuyError('');
+    try {
+      await api.post('/products/buy', { productId: selected.id, ...buyForm, password: buyPassword });
+      setShowPasswordModal(false);
       alert('购买成功！等待接单者确认');
       setSelected(null);
       setBuyForm({ message: '', scheduledTime: '', address: '' });
     } catch (err) {
-      alert(err.response?.data?.error || '购买失败');
+      setBuyError(err.response?.data?.error || '购买失败');
     }
     setBuying(false);
   };
@@ -148,15 +193,70 @@ export default function MarketplacePage() {
                       onChange={e => setBuyForm({ ...buyForm, address: e.target.value })}
                       className="w-full p-3 border border-green-200 rounded-xl focus:ring-2 focus:ring-green-400 outline-none text-sm" placeholder="请输入地址" />
                   </div>
-                  <button onClick={() => handleBuy(selected.id)} disabled={buying}
+                  <button onClick={handleBuy} disabled={buying}
                     className="w-full bg-green-600 hover:bg-green-700 disabled:opacity-50 text-white py-3 rounded-xl font-medium transition-colors">
                     {buying ? '购买中...' : '立即购买 ¥' + selected.price}
                   </button>
                 </div>
               </div>
+
+              <div className="border-t pt-6">
+                <div className="flex items-center justify-between mb-4">
+                  <h3 className="font-semibold text-green-800">用户评价</h3>
+                  <span className="text-sm text-gray-400">
+                    {selected.sitter.reviewCount || 0} 条评价 · 平均 {selected.sitter.reviewAvg || 0} 分
+                  </span>
+                </div>
+                {reviewsLoading ? (
+                  <div className="text-center py-4"><div className="w-6 h-6 border-2 border-green-200 border-t-green-600 rounded-full animate-spin mx-auto" /></div>
+                ) : sitterReviews.length === 0 ? (
+                  <p className="text-sm text-gray-400 text-center py-4">暂无用户评价</p>
+                ) : (
+                  <div className="space-y-3 max-h-80 overflow-y-auto">
+                    {sitterReviews.map(r => (
+                      <div key={r.id} className="bg-green-50 p-4 rounded-xl">
+                        <div className="flex items-center justify-between mb-1">
+                          <div className="flex items-center gap-2">
+                            <div className="w-6 h-6 bg-green-200 rounded-full flex items-center justify-center text-xs font-bold text-green-700">
+                              {r.reviewer?.name?.charAt(0) || '?'}
+                            </div>
+                            <span className="text-sm font-medium text-gray-700">{r.reviewer?.name || '匿名'}</span>
+                          </div>
+                          <span className="text-yellow-500 text-sm">{'★'.repeat(r.rating)}{'☆'.repeat(5 - r.rating)}</span>
+                        </div>
+                        {r.order?.title && <p className="text-xs text-gray-400 mb-1">服务: {r.order.title}</p>}
+                        {r.comment && <p className="text-sm text-gray-600">{r.comment}</p>}
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
             </div>
           </div>
         </main>
+        {showPasswordModal && (
+          <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50">
+            <div className="bg-white rounded-2xl p-6 w-full max-w-sm mx-4 shadow-xl">
+              <h3 className="text-lg font-bold text-gray-800 mb-2">确认购买</h3>
+              <p className="text-sm text-gray-500 mb-4">支付金额: <span className="text-green-600 font-bold">¥{selected?.price}</span></p>
+              {buyError && <p className="text-red-500 text-xs bg-red-50 p-2 rounded mb-3">{buyError}</p>}
+              <input type="password" placeholder="请输入当前密码验证身份" autoFocus
+                value={buyPassword} onChange={e => setBuyPassword(e.target.value)}
+                className="w-full p-3 border border-gray-200 rounded-xl text-sm outline-none focus:ring-2 focus:ring-green-400 mb-4"
+                onKeyDown={e => e.key === 'Enter' && confirmBuy()} />
+              <div className="flex gap-2">
+                <button onClick={confirmBuy} disabled={buying}
+                  className="flex-1 bg-green-600 hover:bg-green-700 disabled:opacity-50 text-white py-2.5 rounded-xl text-sm font-medium">
+                  {buying ? '购买中...' : '确认购买'}
+                </button>
+                <button onClick={() => setShowPasswordModal(false)} disabled={buying}
+                  className="flex-1 bg-gray-100 hover:bg-gray-200 text-gray-600 py-2.5 rounded-xl text-sm font-medium">
+                  取消
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
     );
   }
@@ -186,8 +286,8 @@ export default function MarketplacePage() {
           </div>
           <div className="flex items-center gap-3 ml-auto">
             <input value={search} onChange={e => setSearch(e.target.value)}
-              placeholder="搜索接单者..."
-              className="p-2.5 border border-green-200 rounded-xl text-sm bg-white focus:ring-2 focus:ring-green-400 outline-none w-44" />
+              placeholder="搜索服务或接单者..."
+              className="p-2.5 border border-green-200 rounded-xl text-sm bg-white focus:ring-2 focus:ring-green-400 outline-none w-52" />
             <select value={sort} onChange={e => setSort(e.target.value)}
               className="p-2.5 border border-green-200 rounded-xl text-sm bg-white focus:ring-2 focus:ring-green-400 outline-none">
               {sortOptions.map(o => <option key={o.key} value={o.key}>{o.label}</option>)}
@@ -208,7 +308,7 @@ export default function MarketplacePage() {
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {sorted.map(p => (
               <div key={p.id} className="bg-white rounded-2xl shadow-sm border border-green-100 overflow-hidden card-hover cursor-pointer"
-                onClick={() => setSelected(p)}>
+                onClick={() => handleSelect(p)}>
                 <div className="bg-green-600 p-5">
                   <div className="flex items-center justify-between mb-2">
                     <span className="text-3xl">
@@ -227,7 +327,7 @@ export default function MarketplacePage() {
                       </div>
                       <div>
                         <span className="text-sm text-gray-600 block">{p.sitter.name}</span>
-                        <span className="text-xs text-yellow-500">{'⭐'.repeat(Math.round(p.sitter.rating || 0)) || '新'}</span>
+                        <ReviewStars avg={p.sitter.reviewAvg} count={p.sitter.reviewCount} />
                       </div>
                     </div>
                     <div className="flex items-center gap-1">
@@ -245,6 +345,29 @@ export default function MarketplacePage() {
           </div>
         )}
       </main>
+      {showPasswordModal && (
+        <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50">
+          <div className="bg-white rounded-2xl p-6 w-full max-w-sm mx-4 shadow-xl">
+            <h3 className="text-lg font-bold text-gray-800 mb-2">确认购买</h3>
+            <p className="text-sm text-gray-500 mb-4">支付金额: <span className="text-green-600 font-bold">¥{selected?.price}</span></p>
+            {buyError && <p className="text-red-500 text-xs bg-red-50 p-2 rounded mb-3">{buyError}</p>}
+            <input type="password" placeholder="请输入当前密码验证身份" autoFocus
+              value={buyPassword} onChange={e => setBuyPassword(e.target.value)}
+              className="w-full p-3 border border-gray-200 rounded-xl text-sm outline-none focus:ring-2 focus:ring-green-400 mb-4"
+              onKeyDown={e => e.key === 'Enter' && confirmBuy()} />
+            <div className="flex gap-2">
+              <button onClick={confirmBuy} disabled={buying}
+                className="flex-1 bg-green-600 hover:bg-green-700 disabled:opacity-50 text-white py-2.5 rounded-xl text-sm font-medium">
+                {buying ? '购买中...' : '确认购买'}
+              </button>
+              <button onClick={() => setShowPasswordModal(false)} disabled={buying}
+                className="flex-1 bg-gray-100 hover:bg-gray-200 text-gray-600 py-2.5 rounded-xl text-sm font-medium">
+                取消
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

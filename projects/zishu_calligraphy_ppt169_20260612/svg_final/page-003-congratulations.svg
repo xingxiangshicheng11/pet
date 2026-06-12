@@ -1,0 +1,58 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1280 720">
+  <defs>
+    <radialGradient id="bgWarm" cx="50%" cy="30%" r="60%">
+      <stop offset="0%" stop-color="#F5F0E8" />
+      <stop offset="100%" stop-color="#E8DFD0" />
+    </radialGradient>
+    <linearGradient id="goldLine" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#8B6914" stop-opacity="0" />
+      <stop offset="50%" stop-color="#C4A35A" />
+      <stop offset="100%" stop-color="#8B6914" stop-opacity="0" />
+    </linearGradient>
+  </defs>
+
+  <rect width="1280" height="720" fill="url(#bgWarm)" />
+
+  <rect x="60" y="50" width="3" height="80" fill="#C41E3A" opacity="0.6" />
+  <text x="80" y="100" font-family="KaiTi, STKaiti, SimSun, serif" font-size="40" fill="#2C1810" font-weight="bold">翰墨因缘</text>
+  <text x="320" y="100" font-family="SimSun, Songti SC, serif" font-size="22" fill="#7A6B5D">—— 贺书法大成</text>
+
+  <rect x="60" y="120" width="1160" height="1" fill="url(#goldLine)" />
+
+  <g transform="translate(120, 180)">
+    <path fill="none" stroke="#C4B5A0" stroke-width="1" d="M4,0 H316 A4,4 0 0 1 320,4 V176 A4,4 0 0 1 316,180 H4 A4,4 0 0 1 0,176 V4 A4,4 0 0 1 4,0 Z" />
+    <path fill="#2C1810" opacity="0.08" d="M4,0 H316 A4,4 0 0 1 320,4 V36 A4,4 0 0 1 316,40 H4 A4,4 0 0 1 0,36 V4 A4,4 0 0 1 4,0 Z" />
+    <text x="160" y="26" text-anchor="middle" font-family="KaiTi, STKaiti, SimSun, serif" font-size="22" fill="#2C1810">贺学语</text>
+    <text x="160" y="70" text-anchor="middle" font-family="KaiTi, STKaiti, SimSun, serif" font-size="28" fill="#C41E3A">百尺竿头</text>
+    <text x="160" y="105" text-anchor="middle" font-family="SimSun, Songti SC, serif" font-size="18" fill="#3C2415">更进一步</text>
+    <text x="160" y="145" text-anchor="middle" font-family="SimSun, Songti SC, serif" font-size="16" fill="#7A6B5D">墨池功深 · 笔冢成山</text>
+  </g>
+
+  <g transform="translate(480, 180)">
+    <path fill="none" stroke="#C4B5A0" stroke-width="1" d="M4,0 H316 A4,4 0 0 1 320,4 V176 A4,4 0 0 1 316,180 H4 A4,4 0 0 1 0,176 V4 A4,4 0 0 1 4,0 Z" />
+    <path fill="#2C1810" opacity="0.08" d="M4,0 H316 A4,4 0 0 1 320,4 V36 A4,4 0 0 1 316,40 H4 A4,4 0 0 1 0,36 V4 A4,4 0 0 1 4,0 Z" />
+    <text x="160" y="26" text-anchor="middle" font-family="KaiTi, STKaiti, SimSun, serif" font-size="22" fill="#2C1810">贺艺语</text>
+    <text x="160" y="70" text-anchor="middle" font-family="KaiTi, STKaiti, SimSun, serif" font-size="28" fill="#C41E3A">登峰造极</text>
+    <text x="160" y="105" text-anchor="middle" font-family="SimSun, Songti SC, serif" font-size="18" fill="#3C2415">出神入化</text>
+    <text x="160" y="145" text-anchor="middle" font-family="SimSun, Songti SC, serif" font-size="16" fill="#7A6B5D">行云流水 · 入木三分</text>
+  </g>
+
+  <g transform="translate(840, 180)">
+    <path fill="none" stroke="#C4B5A0" stroke-width="1" d="M4,0 H316 A4,4 0 0 1 320,4 V176 A4,4 0 0 1 316,180 H4 A4,4 0 0 1 0,176 V4 A4,4 0 0 1 4,0 Z" />
+    <path fill="#2C1810" opacity="0.08" d="M4,0 H316 A4,4 0 0 1 320,4 V36 A4,4 0 0 1 316,40 H4 A4,4 0 0 1 0,36 V4 A4,4 0 0 1 4,0 Z" />
+    <text x="160" y="26" text-anchor="middle" font-family="KaiTi, STKaiti, SimSun, serif" font-size="22" fill="#2C1810">贺德语</text>
+    <text x="160" y="70" text-anchor="middle" font-family="KaiTi, STKaiti, SimSun, serif" font-size="28" fill="#C41E3A">厚德载物</text>
+    <text x="160" y="105" text-anchor="middle" font-family="SimSun, Songti SC, serif" font-size="18" fill="#3C2415">锲而不舍</text>
+    <text x="160" y="145" text-anchor="middle" font-family="SimSun, Songti SC, serif" font-size="16" fill="#7A6B5D">金石可镂 · 天道酬勤</text>
+  </g>
+
+  <g transform="translate(120, 420)">
+    <path fill="#F5F0E8" stroke="#C4B5A0" stroke-width="1" opacity="0.8" d="M4,0 H1036 A4,4 0 0 1 1040,4 V156 A4,4 0 0 1 1036,160 H4 A4,4 0 0 1 0,156 V4 A4,4 0 0 1 4,0 Z" />
+    <path fill="#C41E3A" opacity="0.1" d="M4,0 H1036 A4,4 0 0 1 1040,4 V36 A4,4 0 0 1 1036,40 H4 A4,4 0 0 1 0,36 V4 A4,4 0 0 1 4,0 Z" />
+    <text x="520" y="26" text-anchor="middle" font-family="KaiTi, STKaiti, SimSun, serif" font-size="22" fill="#2C1810">祝颂语</text>
+    <text x="520" y="80" text-anchor="middle" font-family="KaiTi, STKaiti, SimSun, serif" font-size="30" fill="#C41E3A">翰墨因缘 艺海无涯 福寿康宁 翰墨长青</text>
+    <text x="520" y="125" text-anchor="middle" font-family="SimSun, Songti SC, serif" font-size="18" fill="#3C2415">愿紫薯在书法艺术的道路上，笔耕不辍，再上层楼</text>
+  </g>
+
+  <text x="1180" y="660" font-family="SimSun, Songti SC, serif" font-size="14" fill="#9E8E7E" text-anchor="end">03 / 05</text>
+</svg>

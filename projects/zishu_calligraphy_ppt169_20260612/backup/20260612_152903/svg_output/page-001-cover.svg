@@ -1,0 +1,59 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1280 720">
+  <defs>
+    <radialGradient id="bgWarm" cx="50%" cy="40%" r="70%">
+      <stop offset="0%" stop-color="#F5F0E8"/>
+      <stop offset="60%" stop-color="#EDE4D4"/>
+      <stop offset="100%" stop-color="#D4C5A9"/>
+    </radialGradient>
+    <linearGradient id="mountain1" x1="0%" y1="100%" x2="50%" y2="0%">
+      <stop offset="0%" stop-color="#4A3728"/>
+      <stop offset="100%" stop-color="#6B5B4E" stop-opacity="0.3"/>
+    </linearGradient>
+    <linearGradient id="mountain2" x1="20%" y1="100%" x2="60%" y2="0%">
+      <stop offset="0%" stop-color="#5C4A3A"/>
+      <stop offset="100%" stop-color="#8B7D6E" stop-opacity="0.2"/>
+    </linearGradient>
+    <linearGradient id="goldGlow" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#8B6914"/>
+      <stop offset="50%" stop-color="#C4A35A"/>
+      <stop offset="100%" stop-color="#8B6914"/>
+    </linearGradient>
+    <filter id="brushTexture">
+      <feTurbulence type="fractalNoise" baseFrequency="0.04" numOctaves="4" result="noise"/>
+      <feDisplacementMap in="SourceGraphic" in2="noise" scale="3" xChannelSelector="R" yChannelSelector="G"/>
+    </filter>
+  </defs>
+
+  <rect width="1280" height="720" fill="url(#bgWarm)"/>
+
+  <g opacity="0.12">
+    <path d="M0 720 L200 400 L350 500 L500 350 L650 480 L800 300 L950 450 L1100 320 L1280 420 L1280 720 Z" fill="url(#mountain1)"/>
+    <path d="M0 720 L150 500 L300 420 L450 550 L600 400 L750 520 L900 380 L1050 500 L1200 410 L1280 500 L1280 720 Z" fill="url(#mountain2)"/>
+    <path d="M100 720 L250 600 L400 650 L550 580 L700 620 L850 560 L1000 610 L1150 570 L1280 620 L1280 720 Z" fill="#7A6B5D" opacity="0.15"/>
+  </g>
+
+  <g opacity="0.08">
+    <circle cx="200" cy="150" r="60" fill="none" stroke="#8B6914" stroke-width="2"/>
+    <circle cx="200" cy="150" r="45" fill="none" stroke="#8B6914" stroke-width="1"/>
+    <circle cx="200" cy="150" r="30" fill="none" stroke="#8B6914" stroke-width="0.5"/>
+  </g>
+
+  <rect x="440" y="200" width="400" height="2" fill="url(#goldGlow)"/>
+
+  <text x="640" y="270" text-anchor="middle" font-family="KaiTi, STKaiti, SimSun, serif" font-size="72" fill="#2C1810" font-weight="bold">紫薯书法大成</text>
+
+  <text x="640" y="330" text-anchor="middle" font-family="SimSun, Songti SC, serif" font-size="28" fill="#7A6B5D">—— 贺紫薯书法艺术大成 ——</text>
+
+  <rect x="440" y="360" width="400" height="2" fill="url(#goldGlow)"/>
+
+  <g transform="translate(580, 400)">
+    <rect x="0" y="0" width="120" height="120" fill="none" stroke="#C41E3A" stroke-width="2" opacity="0.7"/>
+    <text x="60" y="60" text-anchor="middle" dominant-baseline="central" font-family="KaiTi, STKaiti, SimSun, serif" font-size="36" fill="#C41E3A" opacity="0.8">大成</text>
+  </g>
+
+  <g opacity="0.06">
+    <path d="M50 600 Q100 580 200 620 Q300 660 400 600 Q500 540 600 610 Q700 680 800 600 Q900 520 1000 600 Q1100 680 1200 610 L1250 620" fill="none" stroke="#2C1810" stroke-width="3"/>
+  </g>
+
+  <text x="640" y="650" text-anchor="middle" font-family="SimSun, Songti SC, serif" font-size="16" fill="#9E8E7E">甲辰年 · 六月</text>
+</svg>

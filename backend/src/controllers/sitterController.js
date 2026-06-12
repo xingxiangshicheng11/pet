@@ -69,12 +69,17 @@ export async function requestWithdraw(req, res) {
   try {
     const { amount, accountType, accountInfo } = req.body;
     if (!amount || amount <= 0) return res.status(400).json({ error: '无效金额' });
-    const user = await prisma.user.findUnique({ where: { id: req.user.id } });
-    if (user.walletBalance < amount) return res.status(400).json({ error: '余额不足' });
-    await prisma.user.update({ where: { id: req.user.id }, data: { walletBalance: { decrement: amount }, frozenAmount: { increment: amount } } });
-    const w = await prisma.withdrawal.create({ data: { userId: req.user.id, amount, accountType, accountInfo } });
+    const w = await prisma.$transaction(async (tx) => {
+      const r = await tx.user.updateMany({
+        where: { id: req.user.id, walletBalance: { gte: amount } },
+        data: { walletBalance: { decrement: amount }, frozenAmount: { increment: amount } },
+      });
+      if (r.count === 0) throw new Error('余额不足');
+      return tx.withdrawal.create({ data: { userId: req.user.id, amount, accountType, accountInfo } });
+    });
     res.json(w);
   } catch (err) {
+    if (err.message === '余额不足') return res.status(400).json({ error: err.message });
     res.status(500).json({ error: err.message });
   }
 }

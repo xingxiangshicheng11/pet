@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import api from '../../services/api';
 import socket from '../../services/socket';
+import { calcDistance } from '../../utils/geo';
 
 const sortOptions = [
   { key: 'newest', label: '最新发布' },
@@ -8,15 +9,6 @@ const sortOptions = [
   { key: 'price_desc', label: '价格从高到低' },
   { key: 'distance', label: '距离最近' },
 ];
-
-function calcDistance(lat1, lng1, lat2, lng2) {
-  if (!lat1 || !lng1 || !lat2 || !lng2) return Infinity;
-  const R = 6371;
-  const dLat = (lat2 - lat1) * Math.PI / 180;
-  const dLng = (lng2 - lng1) * Math.PI / 180;
-  const a = Math.sin(dLat / 2) ** 2 + Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) * Math.sin(dLng / 2) ** 2;
-  return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-}
 
 const petTypeLabels = { dog: '狗', cat: '猫', other: '其他' };
 const categoryLabels = { sitting: '宠物陪伴', walking: '遛狗', feeding: '喂食', grooming: '美容', training: '训练' };

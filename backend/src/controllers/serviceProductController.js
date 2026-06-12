@@ -1,4 +1,5 @@
 import { PrismaClient } from "@prisma/client";
+import bcrypt from "bcryptjs";
 const prisma = new PrismaClient();
 
 export async function createProduct(req, res) {
@@ -20,6 +21,12 @@ export async function listProducts(req, res) {
     if (req.query.all !== 'true') where.isActive = true;
     if (req.query.sitterId) where.sitterId = +req.query.sitterId;
     if (req.query.category) where.category = req.query.category;
+    if (req.query.search) {
+      where.OR = [
+        { title: { contains: req.query.search, mode: 'insensitive' } },
+        { sitter: { name: { contains: req.query.search, mode: 'insensitive' } } },
+      ];
+    }
     const products = await prisma.serviceProduct.findMany({
       where,
       include: {
@@ -28,7 +35,28 @@ export async function listProducts(req, res) {
       },
       orderBy: { createdAt: "desc" },
     });
-    res.json(products);
+
+    const sitterIds = [...new Set(products.map(p => p.sitterId))];
+    const reviewGroups = await prisma.review.groupBy({
+      by: ['revieweeId'],
+      where: { revieweeId: { in: sitterIds } },
+      _avg: { rating: true },
+      _count: true,
+    });
+    const reviewMap = {};
+    for (const g of reviewGroups) {
+      reviewMap[g.revieweeId] = { avgRating: Math.round(g._avg.rating * 10) / 10, count: g._count };
+    }
+
+    const result = products.map(p => ({
+      ...p,
+      sitter: {
+        ...p.sitter,
+        reviewAvg: reviewMap[p.sitterId]?.avgRating || 0,
+        reviewCount: reviewMap[p.sitterId]?.count || 0,
+      },
+    }));
+    res.json(result);
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
@@ -78,7 +106,13 @@ export async function deleteProduct(req, res) {
 
 export async function buyProduct(req, res) {
   try {
-    const { productId, message, scheduledTime, address } = req.body;
+    const { productId, message, scheduledTime, address, password } = req.body;
+    if (!password) return res.status(400).json({ error: "请验证当前密码" });
+
+    const user = await prisma.user.findUnique({ where: { id: req.user.id } });
+    const valid = await bcrypt.compare(password, user.password);
+    if (!valid) return res.status(403).json({ error: "密码错误" });
+
     const product = await prisma.serviceProduct.findUnique({ where: { id: productId } });
     if (!product) return res.status(404).json({ error: "Product not found" });
     if (!product.isActive) return res.status(400).json({ error: "Product is not available" });

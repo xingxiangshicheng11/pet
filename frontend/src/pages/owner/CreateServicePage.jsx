@@ -47,6 +47,11 @@ export default function CreateServicePage() {
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError('');
+    if (!form.latitude || !form.longitude) {
+      setError('请在地图上选择服务位置（拖动标记或点击地图）');
+      setSubmitting(false);
+      return;
+    }
     if (form.scheduledStart && form.scheduledEnd && form.scheduledStart >= form.scheduledEnd) {
       setError('结束时间必须晚于开始时间'); setSubmitting(false); return;
     }

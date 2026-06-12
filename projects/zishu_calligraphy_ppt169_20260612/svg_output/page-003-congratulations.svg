@@ -1,0 +1,61 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1280 720">
+  <defs>
+    <linearGradient id="washBg" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#FAF8F2"/>
+      <stop offset="100%" stop-color="#F0E8D8"/>
+    </linearGradient>
+    <linearGradient id="inkLine" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#2C1810" stop-opacity="0"/>
+      <stop offset="50%" stop-color="#2C1810" stop-opacity="0.2"/>
+      <stop offset="100%" stop-color="#2C1810" stop-opacity="0"/>
+    </linearGradient>
+  </defs>
+
+  <rect width="1280" height="720" fill="url(#washBg)"/>
+
+  <g opacity="0.05">
+    <path d="M1100 0 Q1150 200 1080 400 Q1010 600 1100 720" fill="none" stroke="#2D5A27" stroke-width="60"/>
+  </g>
+
+  <line x1="100" y1="80" x2="100" y2="160" stroke="#C41E3A" stroke-width="2" opacity="0.5"/>
+  <text x="120" y="130" font-family="KaiTi, STKaiti, SimSun, serif" font-size="42" fill="#2C1810" font-weight="bold" letter-spacing="4">翰墨因缘</text>
+  <text x="340" y="130" font-family="SimSun, Songti SC, serif" font-size="22" fill="#6B6B6B" letter-spacing="2">—— 贺书法大成</text>
+  <line x1="100" y1="155" x2="1180" y2="155" stroke="url(#inkLine)" stroke-width="0.8"/>
+
+  <g transform="translate(120, 200)">
+    <rect x="0" y="0" width="320" height="200" fill="none" stroke="#2C1810" stroke-width="0.5" opacity="0.2"/>
+    <line x1="0" y1="42" x2="320" y2="42" stroke="#2C1810" stroke-width="0.3" opacity="0.15"/>
+    <text x="160" y="28" text-anchor="middle" font-family="SimSun, Songti SC, serif" font-size="14" fill="#6B6B6B" letter-spacing="2">贺学语</text>
+    <text x="160" y="80" text-anchor="middle" font-family="KaiTi, STKaiti, SimSun, serif" font-size="28" fill="#C41E3A" letter-spacing="4">百尺竿头</text>
+    <text x="160" y="115" text-anchor="middle" font-family="SimSun, Songti SC, serif" font-size="18" fill="#3C2415">更进一步</text>
+    <text x="160" y="155" text-anchor="middle" font-family="SimSun, Songti SC, serif" font-size="15" fill="#6B6B6B" letter-spacing="2">墨池功深 · 笔冢成山</text>
+  </g>
+
+  <g transform="translate(480, 200)">
+    <rect x="0" y="0" width="320" height="200" fill="none" stroke="#2C1810" stroke-width="0.5" opacity="0.2"/>
+    <line x1="0" y1="42" x2="320" y2="42" stroke="#2C1810" stroke-width="0.3" opacity="0.15"/>
+    <text x="160" y="28" text-anchor="middle" font-family="SimSun, Songti SC, serif" font-size="14" fill="#6B6B6B" letter-spacing="2">贺艺语</text>
+    <text x="160" y="80" text-anchor="middle" font-family="KaiTi, STKaiti, SimSun, serif" font-size="28" fill="#C41E3A" letter-spacing="4">登峰造极</text>
+    <text x="160" y="115" text-anchor="middle" font-family="SimSun, Songti SC, serif" font-size="18" fill="#3C2415">出神入化</text>
+    <text x="160" y="155" text-anchor="middle" font-family="SimSun, Songti SC, serif" font-size="15" fill="#6B6B6B" letter-spacing="2">行云流水 · 入木三分</text>
+  </g>
+
+  <g transform="translate(840, 200)">
+    <rect x="0" y="0" width="320" height="200" fill="none" stroke="#2C1810" stroke-width="0.5" opacity="0.2"/>
+    <line x1="0" y1="42" x2="320" y2="42" stroke="#2C1810" stroke-width="0.3" opacity="0.15"/>
+    <text x="160" y="28" text-anchor="middle" font-family="SimSun, Songti SC, serif" font-size="14" fill="#6B6B6B" letter-spacing="2">贺德语</text>
+    <text x="160" y="80" text-anchor="middle" font-family="KaiTi, STKaiti, SimSun, serif" font-size="28" fill="#C41E3A" letter-spacing="4">厚德载物</text>
+    <text x="160" y="115" text-anchor="middle" font-family="SimSun, Songti SC, serif" font-size="18" fill="#3C2415">锲而不舍</text>
+    <text x="160" y="155" text-anchor="middle" font-family="SimSun, Songti SC, serif" font-size="15" fill="#6B6B6B" letter-spacing="2">金石可镂 · 天道酬勤</text>
+  </g>
+
+  <g transform="translate(120, 460)">
+    <rect x="0" y="0" width="1040" height="140" fill="none" stroke="#2C1810" stroke-width="0.5" opacity="0.2"/>
+    <line x1="0" y1="42" x2="1040" y2="42" stroke="#2C1810" stroke-width="0.3" opacity="0.15"/>
+    <text x="520" y="28" text-anchor="middle" font-family="SimSun, Songti SC, serif" font-size="14" fill="#6B6B6B" letter-spacing="2">祝颂语</text>
+    <text x="520" y="78" text-anchor="middle" font-family="KaiTi, STKaiti, SimSun, serif" font-size="28" fill="#C41E3A" letter-spacing="3">翰墨因缘 · 艺海无涯 · 福寿康宁 · 翰墨长青</text>
+    <text x="520" y="115" text-anchor="middle" font-family="SimSun, Songti SC, serif" font-size="17" fill="#3C2415">愿紫薯在书法艺术的道路上，笔耕不辍，再上层楼</text>
+  </g>
+
+  <text x="1180" y="660" font-family="SimSun, Songti SC, serif" font-size="14" fill="#9E8E7E" text-anchor="end">03 / 05</text>
+</svg>

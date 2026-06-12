@@ -44,6 +44,7 @@ model User {
   acceptNight       Boolean   @default(false)
   walletBalance     Float     @default(0)
   frozenAmount      Float     @default(0)
+  tokenVersion      Int       @default(0)
 
   pets             Pet[]
   servicesListed   ServiceListing[] @relation("OwnerServices")
@@ -63,6 +64,16 @@ model User {
   handledEmergencies EmergencyAlert[] @relation("EmergencyHandler")
   adminLogs          AdminLog[]
   sentNotifications  SystemNotification[]
+  refreshTokens      RefreshToken[]
+}
+
+model RefreshToken {
+  id        Int      @id @default(autoincrement())
+  tokenHash String   @unique
+  userId    Int
+  user      User     @relation(fields: [userId], references: [id])
+  expiresAt DateTime
+  createdAt DateTime @default(now())
 }
 
 

@@ -1,0 +1,58 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1280 720">
+  <defs>
+    <radialGradient id="bgWarm" cx="50%" cy="30%" r="60%">
+      <stop offset="0%" stop-color="#F5F0E8"/>
+      <stop offset="100%" stop-color="#E8DFD0"/>
+    </radialGradient>
+    <linearGradient id="goldLine" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#8B6914" stop-opacity="0"/>
+      <stop offset="50%" stop-color="#C4A35A"/>
+      <stop offset="100%" stop-color="#8B6914" stop-opacity="0"/>
+    </linearGradient>
+    <filter id="shadow">
+      <feDropShadow dx="2" dy="2" stdDeviation="3" flood-color="#2C1810" flood-opacity="0.1"/>
+    </filter>
+  </defs>
+
+  <rect width="1280" height="720" fill="url(#bgWarm)"/>
+
+  <rect x="60" y="50" width="3" height="80" fill="#C41E3A" opacity="0.6"/>
+  <text x="80" y="100" font-family="KaiTi, STKaiti, SimSun, serif" font-size="40" fill="#2C1810" font-weight="bold">紫气东来</text>
+  <text x="280" y="100" font-family="SimSun, Songti SC, serif" font-size="22" fill="#7A6B5D">—— 紫薯的书法之路</text>
+
+  <rect x="60" y="120" width="1160" height="1" fill="url(#goldLine)"/>
+
+  <g transform="translate(120, 180)">
+    <circle cx="24" cy="24" r="24" fill="#C41E3A" opacity="0.15"/>
+    <text x="24" y="30" text-anchor="middle" font-family="KaiTi, STKaiti, SimSun, serif" font-size="22" fill="#C41E3A" font-weight="bold">一</text>
+    <text x="70" y="30" font-family="KaiTi, STKaiti, SimSun, serif" font-size="24" fill="#2C1810">初识笔墨</text>
+    <text x="70" y="65" font-family="SimSun, Songti SC, serif" font-size="18" fill="#3C2415">从第一次握笔，到写出第一个完整的字，</text>
+    <text x="70" y="92" font-family="SimSun, Songti SC, serif" font-size="18" fill="#3C2415">笔墨之间，便结下了不解之缘。</text>
+  </g>
+
+  <g transform="translate(120, 300)">
+    <circle cx="24" cy="24" r="24" fill="#C41E3A" opacity="0.15"/>
+    <text x="24" y="30" text-anchor="middle" font-family="KaiTi, STKaiti, SimSun, serif" font-size="22" fill="#C41E3A" font-weight="bold">二</text>
+    <text x="70" y="30" font-family="KaiTi, STKaiti, SimSun, serif" font-size="24" fill="#2C1810">寒暑不辍</text>
+    <text x="70" y="65" font-family="SimSun, Songti SC, serif" font-size="18" fill="#3C2415">多少个日夜，在书桌前挥毫泼墨，</text>
+    <text x="70" y="92" font-family="SimSun, Songti SC, serif" font-size="18" fill="#3C2415">每一笔都是坚持，每一划都是热爱。</text>
+  </g>
+
+  <g transform="translate(120, 420)">
+    <circle cx="24" cy="24" r="24" fill="#C41E3A" opacity="0.15"/>
+    <text x="24" y="30" text-anchor="middle" font-family="KaiTi, STKaiti, SimSun, serif" font-size="22" fill="#C41E3A" font-weight="bold">三</text>
+    <text x="70" y="30" font-family="KaiTi, STKaiti, SimSun, serif" font-size="24" fill="#2C1810">终成大器</text>
+    <text x="70" y="65" font-family="SimSun, Songti SC, serif" font-size="18" fill="#3C2415">墨池功深，笔冢成山，今日终得大成。</text>
+    <text x="70" y="92" font-family="SimSun, Songti SC, serif" font-size="18" fill="#3C2415">这是对你多年坚持最好的回报。</text>
+  </g>
+
+  <g transform="translate(120, 540)">
+    <circle cx="24" cy="24" r="24" fill="#8B6914" opacity="0.15"/>
+    <text x="24" y="30" text-anchor="middle" font-family="KaiTi, STKaiti, SimSun, serif" font-size="22" fill="#8B6914" font-weight="bold">四</text>
+    <text x="70" y="30" font-family="KaiTi, STKaiti, SimSun, serif" font-size="24" fill="#2C1810">未来可期</text>
+    <text x="70" y="65" font-family="SimSun, Songti SC, serif" font-size="18" fill="#3C2415">百尺竿头须进步，十方世界是全身。</text>
+    <text x="70" y="92" font-family="SimSun, Songti SC, serif" font-size="18" fill="#3C2415">期待紫薯在书法艺术上继续攀登新高峰。</text>
+  </g>
+
+  <text x="1180" y="660" font-family="SimSun, Songti SC, serif" font-size="14" fill="#9E8E7E" text-anchor="end">04 / 05</text>
+</svg>

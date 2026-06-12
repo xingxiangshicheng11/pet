@@ -1,0 +1,51 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1280 720">
+  <defs>
+    <linearGradient id="washBg" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#FAF8F2"/>
+      <stop offset="100%" stop-color="#F0E8D8"/>
+    </linearGradient>
+    <linearGradient id="inkLine" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#2C1810" stop-opacity="0"/>
+      <stop offset="50%" stop-color="#2C1810" stop-opacity="0.2"/>
+      <stop offset="100%" stop-color="#2C1810" stop-opacity="0"/>
+    </linearGradient>
+  </defs>
+
+  <rect width="1280" height="720" fill="url(#washBg)"/>
+
+  <g opacity="0.04">
+    <path d="M90 0 Q150 200 100 400 Q50 600 120 720" fill="none" stroke="#2D5A27" stroke-width="80"/>
+  </g>
+
+  <line x1="100" y1="80" x2="100" y2="160" stroke="#C41E3A" stroke-width="2" opacity="0.5"/>
+  <text x="120" y="130" font-family="KaiTi, STKaiti, SimSun, serif" font-size="42" fill="#2C1810" font-weight="bold" letter-spacing="4">书道精神</text>
+  <line x1="100" y1="155" x2="1180" y2="155" stroke="url(#inkLine)" stroke-width="0.8"/>
+
+  <g transform="translate(120, 200)">
+    <text x="0" y="0" font-family="KaiTi, STKaiti, SimSun, serif" font-size="30" fill="#2C1810" letter-spacing="2">墨池功深</text>
+    <text x="220" y="0" font-family="SimSun, Songti SC, serif" font-size="20" fill="#6B6B6B">—— 王羲之洗笔 · 池水尽墨</text>
+
+    <text x="0" y="55" font-family="SimSun, Songti SC, serif" font-size="20" fill="#3C2415">东晋书圣王羲之，七岁习书，每日于池边练字。</text>
+    <text x="0" y="85" font-family="SimSun, Songti SC, serif" font-size="20" fill="#3C2415">每写罢便在家门前池塘洗笔，天长日久，</text>
+    <text x="0" y="115" font-family="SimSun, Songti SC, serif" font-size="20" fill="#3C2415">一池清水竟化为墨色。后人称此池为"墨池"。</text>
+  </g>
+
+  <g opacity="0.05">
+    <path d="M1000 180 Q1060 200 1020 240 Q980 280 1040 320" fill="none" stroke="#2D5A27" stroke-width="15"/>
+  </g>
+
+  <g transform="translate(120, 360)">
+    <text x="0" y="0" font-family="KaiTi, STKaiti, SimSun, serif" font-size="30" fill="#2C1810" letter-spacing="2">笔冢成山</text>
+    <text x="220" y="0" font-family="SimSun, Songti SC, serif" font-size="20" fill="#6B6B6B">—— 怀素秃笔 · 埋于山下</text>
+
+    <text x="0" y="55" font-family="SimSun, Songti SC, serif" font-size="20" fill="#3C2415">唐代草圣怀素，因家贫无纸，种芭蕉以蕉叶代纸。</text>
+    <text x="0" y="85" font-family="SimSun, Songti SC, serif" font-size="20" fill="#3C2415">经年累月，写秃的笔头堆积成山，埋于山下，</text>
+    <text x="0" y="115" font-family="SimSun, Songti SC, serif" font-size="20" fill="#3C2415">人称"笔冢"。智永禅师亦有"退笔冢"传世。</text>
+  </g>
+
+  <line x1="120" y1="530" x2="120" y2="580" stroke="#C41E3A" stroke-width="1.5" opacity="0.3"/>
+  <text x="135" y="560" font-family="KaiTi, STKaiti, SimSun, serif" font-size="24" fill="#2D5A27" letter-spacing="2">锲而不舍，金石可镂</text>
+  <text x="520" y="560" font-family="SimSun, Songti SC, serif" font-size="16" fill="#6B6B6B">—— 荀子《劝学》</text>
+
+  <text x="1180" y="660" font-family="SimSun, Songti SC, serif" font-size="14" fill="#9E8E7E" text-anchor="end">02 / 05</text>
+</svg>

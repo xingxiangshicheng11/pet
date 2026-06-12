@@ -29,7 +29,7 @@ export async function listServices(req, res) {
       }
     }
     const services = await prisma.serviceListing.findMany({
-      where, include: { owner: { select: { id: true, name: true, avatar: true } }, pet: true, sitter: { select: { id: true, name: true } } },
+      where, include: { owner: { select: { id: true, name: true, avatar: true } }, pet: true, sitter: { select: { id: true, name: true } }, reviews: { include: { reviewer: { select: { id: true, name: true } } } } },
       orderBy: { createdAt: "desc" },
     });
     res.json(services);
@@ -42,7 +42,7 @@ export async function getService(req, res) {
   try {
     const service = await prisma.serviceListing.findUnique({
       where: { id: +req.params.id },
-      include: { owner: { select: { id: true, name: true, avatar: true, phone: true, bio: true } }, pet: true, sitter: { select: { id: true, name: true, avatar: true, phone: true, bio: true } } },
+      include: { owner: { select: { id: true, name: true, avatar: true, phone: true, bio: true } }, pet: true, sitter: { select: { id: true, name: true, avatar: true, phone: true, bio: true } }, reviews: { include: { reviewer: { select: { id: true, name: true } } } } },
     });
     if (!service) return res.status(404).json({ error: "Service not found" });
     res.json(service);
@@ -53,16 +53,19 @@ export async function getService(req, res) {
 
 export async function acceptService(req, res) {
   try {
-    const service = await prisma.serviceListing.findUnique({ where: { id: +req.params.id } });
-    if (!service) return res.status(404).json({ error: "Service not found" });
-    if (service.status !== "OPEN") return res.status(400).json({ error: "Service is not available" });
-    const updated = await prisma.serviceListing.update({
-      where: { id: +req.params.id },
+    const result = await prisma.serviceListing.updateMany({
+      where: { id: +req.params.id, status: "OPEN" },
       data: { sitterId: req.user.id, status: "ACCEPTED" },
+    });
+    if (result.count === 0) {
+      return res.status(400).json({ error: "Service is not available" });
+    }
+    const updated = await prisma.serviceListing.findUnique({
+      where: { id: +req.params.id },
       include: { owner: { select: { id: true, name: true } }, pet: true, sitter: { select: { id: true, name: true } } },
     });
     const io = req.app.get("io");
-    io.to(`user:${service.ownerId}`).emit("service:accepted", updated);
+    io.to(`user:${updated.ownerId}`).emit("service:accepted", updated);
     io.to("admin").emit("admin:alert", { type: "service_accepted", service: updated });
     res.json(updated);
   } catch (err) {
@@ -114,32 +117,41 @@ export async function nearbyServices(req, res) {
       return res.status(400).json({ error: "lat and lng query params required" });
     }
 
-    const services = await prisma.$queryRawUnsafe(`
-      SELECT id, title, description, category, price, status,
-        "scheduledStart", "scheduledEnd", address, latitude, longitude,
-        "isUrgent", "extraTip", "createdAt",
-        "ownerId", "petId", "sitterId",
-        (6371 * acos(
-          cos(radians($1)) * cos(radians(latitude)) *
-          cos(radians(longitude) - radians($2)) +
-          sin(radians($1)) * sin(radians(latitude))
-        )) AS distance
-      FROM "ServiceListing"
-      WHERE latitude IS NOT NULL AND longitude IS NOT NULL AND status = 'OPEN'
-      HAVING distance < $3
-      ORDER BY distance
+    const rows = await prisma.$queryRawUnsafe(`
+      SELECT id, distance FROM (
+        SELECT id,
+          ROUND((6371 * acos(
+            cos(radians($1)) * cos(radians(latitude)) *
+            cos(radians(longitude) - radians($2)) +
+            sin(radians($1)) * sin(radians(latitude))
+          ))::numeric, 2)::float AS distance
+        FROM "ServiceListing"
+        WHERE latitude IS NOT NULL AND longitude IS NOT NULL AND status = 'OPEN'
+      ) sub
+      WHERE sub.distance < $3
+      ORDER BY sub.distance
     `, userLat, userLng, searchRadius);
 
-    const enriched = await Promise.all(services.map(async (s) => {
-      const owner = await prisma.user.findUnique({
-        where: { id: s.ownerId },
-        select: { id: true, name: true, avatar: true },
-      });
-      const pet = s.petId ? await prisma.pet.findUnique({ where: { id: s.petId } }) : null;
-      return { ...s, distance: Math.round(s.distance * 100) / 100, owner, pet };
-    }));
+    if (!rows || rows.length === 0) return res.json([]);
 
-    res.json(enriched);
+    const ids = rows.map(r => r.id);
+    const distMap = {};
+    for (const r of rows) distMap[r.id] = r.distance;
+
+    const services = await prisma.serviceListing.findMany({
+      where: { id: { in: ids } },
+      include: {
+        owner: { select: { id: true, name: true, avatar: true } },
+        pet: true,
+        sitter: { select: { id: true, name: true } },
+      },
+    });
+
+    const result = services
+      .map(s => ({ ...s, distance: distMap[s.id] }))
+      .sort((a, b) => (distMap[a.id] || 0) - (distMap[b.id] || 0));
+
+    res.json(result);
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
@@ -164,7 +176,7 @@ export async function updateServiceStatus(req, res) {
     const updated = await prisma.serviceListing.update({
       where: { id: +req.params.id },
       data: { status },
-      include: { owner: { select: { id: true, name: true } }, pet: true, sitter: { select: { id: true, name: true } } },
+      include: { owner: { select: { id: true, name: true } }, pet: true, sitter: { select: { id: true, name: true } }, reviews: { include: { reviewer: { select: { id: true, name: true } } } } },
     });
     const io = req.app.get("io");
     io.to(`user:${service.ownerId}`).emit("service:status", updated);

@@ -15,6 +15,11 @@ export default function OwnerSettingsPage() {
     address: user?.address || '',
   });
 
+  const [showChangePwd, setShowChangePwd] = useState(false);
+  const [pwdForm, setPwdForm] = useState({ oldPassword: '', newPassword: '', confirmPassword: '' });
+  const [pwdError, setPwdError] = useState('');
+  const [pwdSaving, setPwdSaving] = useState(false);
+
   const handleLogout = () => {
     logout();
     navigate('/login');
@@ -30,6 +35,26 @@ export default function OwnerSettingsPage() {
       alert(err.response?.data?.error || '保存失败');
     }
     setSaving(false);
+  };
+
+  const handleChangePwd = async (e) => {
+    e.preventDefault();
+    setPwdError('');
+    if (pwdForm.newPassword.length < 8) { setPwdError('密码至少需要 8 个字符'); return; }
+    if (pwdForm.newPassword !== pwdForm.confirmPassword) { setPwdError('两次密码不一致'); return; }
+    setPwdSaving(true);
+    try {
+      await api.post('/auth/change-password', {
+        currentPassword: pwdForm.oldPassword,
+        newPassword: pwdForm.newPassword,
+      });
+      alert('密码修改成功');
+      setShowChangePwd(false);
+      setPwdForm({ oldPassword: '', newPassword: '', confirmPassword: '' });
+    } catch (err) {
+      setPwdError(err.response?.data?.error || '修改失败');
+    }
+    setPwdSaving(false);
   };
 
   return (
@@ -96,13 +121,38 @@ export default function OwnerSettingsPage() {
             </div>
             <button className="text-xs text-green-600 hover:underline">绑定</button>
           </div>
-          <div className="flex items-center justify-between p-3 bg-gray-50 rounded-xl">
-            <div>
-              <p className="text-sm font-medium text-gray-700">修改密码</p>
-              <p className="text-xs text-gray-400">定期更换密码保障安全</p>
+
+          {!showChangePwd ? (
+            <div className="flex items-center justify-between p-3 bg-gray-50 rounded-xl">
+              <div>
+                <p className="text-sm font-medium text-gray-700">修改密码</p>
+                <p className="text-xs text-gray-400">需验证旧密码，定期更换保障安全</p>
+              </div>
+              <button className="text-xs text-green-600 hover:underline" onClick={() => setShowChangePwd(true)}>修改</button>
             </div>
-            <button className="text-xs text-green-600 hover:underline" onClick={() => navigate('/forgot-password')}>修改</button>
-          </div>
+          ) : (
+            <form onSubmit={handleChangePwd} className="p-4 bg-gray-50 rounded-xl space-y-3 border border-green-100">
+              <p className="text-sm font-medium text-gray-700">修改密码</p>
+              {pwdError && <p className="text-red-500 text-xs bg-red-50 p-2 rounded">{pwdError}</p>}
+              <input type="password" placeholder="当前密码" required
+                value={pwdForm.oldPassword} onChange={e => setPwdForm({ ...pwdForm, oldPassword: e.target.value })}
+                className="w-full p-2.5 border border-green-200 rounded-lg text-sm outline-none focus:ring-2 focus:ring-green-400" />
+              <input type="password" placeholder="新密码 (至少8位，含大小写字母、数字、特殊字符)" required
+                value={pwdForm.newPassword} onChange={e => setPwdForm({ ...pwdForm, newPassword: e.target.value })}
+                className="w-full p-2.5 border border-green-200 rounded-lg text-sm outline-none focus:ring-2 focus:ring-green-400" />
+              <input type="password" placeholder="确认新密码" required
+                value={pwdForm.confirmPassword} onChange={e => setPwdForm({ ...pwdForm, confirmPassword: e.target.value })}
+                className="w-full p-2.5 border border-green-200 rounded-lg text-sm outline-none focus:ring-2 focus:ring-green-400" />
+              <div className="flex gap-2">
+                <button type="submit" disabled={pwdSaving}
+                  className="bg-green-600 hover:bg-green-700 disabled:opacity-50 text-white px-4 py-2 rounded-lg text-sm font-medium">
+                  {pwdSaving ? '修改中...' : '确认修改'}
+                </button>
+                <button type="button" onClick={() => { setShowChangePwd(false); setPwdError(''); setPwdForm({ oldPassword: '', newPassword: '', confirmPassword: '' }); }}
+                  className="text-gray-500 hover:text-gray-700 px-4 py-2 rounded-lg text-sm">取消</button>
+              </div>
+            </form>
+          )}
         </div>
       )}
 
