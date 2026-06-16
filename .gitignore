@@ -4,3 +4,6 @@ dist/
 *.log
 uploads/*
 !uploads/.gitkeep
+opencode.json
+.opencode/
+projects/
