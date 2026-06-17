@@ -8,16 +8,16 @@ datasource db {
 }
 
 model User {
-  id        Int      @id @default(autoincrement())
-  email     String   @unique
-  password  String
-  name      String
-  phone     String?
-  roles     String   @default("OWNER")
-  avatar    String?
-  latitude  Float?
-  longitude Float?
-  address   String?
+  id                Int       @id @default(autoincrement())
+  email             String    @unique
+  password          String
+  name              String
+  phone             String?
+  roles             String    @default("OWNER")
+  avatar            String?
+  latitude          Float?
+  longitude         Float?
+  address           String?
   isActive          Boolean   @default(true)
   bio               String?
   experience        String?
@@ -29,39 +29,39 @@ model User {
   updatedAt         DateTime  @updatedAt
 
   // New sitter fields
-  gender            String?
-  age               Int?
-  serviceArea       String?
-  serviceTags       String?
-  holidayPrice      Json?
-  distancePrice     Json?
-  certificates      Json?
-  totalServices     Int       @default(0)
-  totalHours        Int       @default(0)
-  receiveEnabled    Boolean   @default(true)
-  maxDistance       Int       @default(20)
-  acceptUrgent      Boolean   @default(true)
-  acceptNight       Boolean   @default(false)
-  walletBalance     Float     @default(0)
-  frozenAmount      Float     @default(0)
-  tokenVersion      Int       @default(0)
+  gender         String?
+  age            Int?
+  serviceArea    String?
+  serviceTags    String?
+  holidayPrice   Json?
+  distancePrice  Json?
+  certificates   Json?
+  totalServices  Int     @default(0)
+  totalHours     Int     @default(0)
+  receiveEnabled Boolean @default(true)
+  maxDistance    Int     @default(20)
+  acceptUrgent   Boolean @default(true)
+  acceptNight    Boolean @default(false)
+  walletBalance  Float   @default(0)
+  frozenAmount   Float   @default(0)
+  tokenVersion   Int     @default(0)
 
-  pets             Pet[]
-  servicesListed   ServiceListing[] @relation("OwnerServices")
-  servicesAccepted ServiceListing[] @relation("SitterServices")
-  reviewsGiven     Review[]         @relation("Reviewer")
-  reviewsReceived  Review[]         @relation("Reviewee")
-  messagesSent     Message[]        @relation("Sender")
-  messagesReceived Message[]        @relation("Receiver")
-  notifications    Notification[]
-  serviceProducts  ServiceProduct[]
-  productOrders    ProductOrder[]
-  withdrawals      Withdrawal[]
-  emergencyAlerts  EmergencyAlert[]
-  favoriteSitters  FavoriteSitter[] @relation("FavoriteSitters")
-  favoritedBy      FavoriteSitter[] @relation("FavoritedBy")
-  withdrawalReviews Withdrawal[]   @relation("WithdrawalReviewer")
-  handledEmergencies EmergencyAlert[] @relation("EmergencyHandler")
+  pets               Pet[]
+  servicesListed     ServiceListing[]     @relation("OwnerServices")
+  servicesAccepted   ServiceListing[]     @relation("SitterServices")
+  reviewsGiven       Review[]             @relation("Reviewer")
+  reviewsReceived    Review[]             @relation("Reviewee")
+  messagesSent       Message[]            @relation("Sender")
+  messagesReceived   Message[]            @relation("Receiver")
+  notifications      Notification[]
+  serviceProducts    ServiceProduct[]
+  productOrders      ProductOrder[]
+  withdrawals        Withdrawal[]
+  emergencyAlerts    EmergencyAlert[]
+  favoriteSitters    FavoriteSitter[]     @relation("FavoriteSitters")
+  favoritedBy        FavoriteSitter[]     @relation("FavoritedBy")
+  withdrawalReviews  Withdrawal[]         @relation("WithdrawalReviewer")
+  handledEmergencies EmergencyAlert[]     @relation("EmergencyHandler")
   adminLogs          AdminLog[]
   sentNotifications  SystemNotification[]
   refreshTokens      RefreshToken[]
@@ -75,7 +75,6 @@ model RefreshToken {
   expiresAt DateTime
   createdAt DateTime @default(now())
 }
-
 
 model Pet {
   id        Int      @id @default(autoincrement())
@@ -109,22 +108,22 @@ model ServiceProduct {
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 
-  orders      ProductOrder[]
+  orders ProductOrder[]
 }
 
 model ProductOrder {
-  id         Int      @id @default(autoincrement())
-  productId  Int
-  product    ServiceProduct @relation(fields: [productId], references: [id])
-  buyerId    Int
-  buyer      User     @relation(fields: [buyerId], references: [id])
-  status     String   @default("PENDING")
-  message    String?
+  id            Int            @id @default(autoincrement())
+  productId     Int
+  product       ServiceProduct @relation(fields: [productId], references: [id])
+  buyerId       Int
+  buyer         User           @relation(fields: [buyerId], references: [id])
+  status        String         @default("PENDING")
+  message       String?
   scheduledTime DateTime?
-  address    String?
-  createdAt  DateTime @default(now())
-  updatedAt  DateTime @updatedAt
-  messages   Message[]
+  address       String?
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt
+  messages      Message[]
 }
 
 model ServiceListing {
@@ -148,15 +147,19 @@ model ServiceListing {
   createdAt      DateTime      @default(now())
   updatedAt      DateTime      @updatedAt
 
-  reviews      Review[]
-  messages     Message[]
-  payments     Payment[]
-  photos       ServicePhoto[]
-  emergencies  EmergencyAlert[] @relation("ServiceEmergencies")
-  
+  reviews     Review[]
+  messages    Message[]
+  payments    Payment[]
+  photos      ServicePhoto[]
+  emergencies EmergencyAlert[] @relation("ServiceEmergencies")
+
   // 是否加急、是否夜间服务
-  isUrgent     Boolean  @default(false)
-  extraTip     Float?
+  isUrgent Boolean @default(false)
+  extraTip Float?
+
+  @@index([status, createdAt])
+  @@index([ownerId])
+  @@index([sitterId])
 }
 
 enum ServiceStatus {
@@ -169,33 +172,36 @@ enum ServiceStatus {
 }
 
 model Review {
-  id         Int      @id @default(autoincrement())
+  id         Int            @id @default(autoincrement())
   rating     Int
   comment    String?
   orderId    Int
   order      ServiceListing @relation(fields: [orderId], references: [id])
   reviewerId Int
-  reviewer   User     @relation("Reviewer", fields: [reviewerId], references: [id])
+  reviewer   User           @relation("Reviewer", fields: [reviewerId], references: [id])
   revieweeId Int
-  reviewee   User     @relation("Reviewee", fields: [revieweeId], references: [id])
-  createdAt  DateTime @default(now())
+  reviewee   User           @relation("Reviewee", fields: [revieweeId], references: [id])
+  createdAt  DateTime       @default(now())
 
   @@unique([orderId, reviewerId])
 }
 
 model Message {
-  id              Int             @id @default(autoincrement())
-  content         String
-  senderId        Int
-  sender          User            @relation("Sender", fields: [senderId], references: [id])
-  receiverId      Int
-  receiver        User            @relation("Receiver", fields: [receiverId], references: [id])
-  orderId         Int?
-  order           ServiceListing? @relation(fields: [orderId], references: [id])
-  productOrderId  Int?
-  productOrder    ProductOrder?   @relation(fields: [productOrderId], references: [id])
-  readAt          DateTime?
-  createdAt       DateTime        @default(now())
+  id             Int             @id @default(autoincrement())
+  content        String
+  senderId       Int
+  sender         User            @relation("Sender", fields: [senderId], references: [id])
+  receiverId     Int
+  receiver       User            @relation("Receiver", fields: [receiverId], references: [id])
+  orderId        Int?
+  order          ServiceListing? @relation(fields: [orderId], references: [id])
+  productOrderId Int?
+  productOrder   ProductOrder?   @relation(fields: [productOrderId], references: [id])
+  readAt         DateTime?
+  createdAt      DateTime        @default(now())
+
+  @@index([orderId, createdAt])
+  @@index([receiverId])
 }
 
 model Notification {
@@ -211,60 +217,60 @@ model Notification {
 }
 
 model Payment {
-  id            Int           @id @default(autoincrement())
+  id            Int            @id @default(autoincrement())
   orderId       Int
   order         ServiceListing @relation(fields: [orderId], references: [id])
   amount        Float
   method        String
-  status        PaymentStatus @default(PENDING)
+  status        PaymentStatus  @default(PENDING)
   transactionId String?
   paidAt        DateTime?
-  createdAt     DateTime      @default(now())
-  updatedAt     DateTime      @updatedAt
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt
 }
 
 model Withdrawal {
-  id          Int      @id @default(autoincrement())
-  userId      Int
-  user        User     @relation(fields: [userId], references: [id])
-  amount      Float
-  status      String   @default("PENDING")
-  accountType String
-  accountInfo String?
-  remark      String?
-  reviewedBy  Int?
-  reviewer    User?    @relation("WithdrawalReviewer", fields: [reviewedBy], references: [id])
-  reviewedAt  DateTime?
+  id           Int       @id @default(autoincrement())
+  userId       Int
+  user         User      @relation(fields: [userId], references: [id])
+  amount       Float
+  status       String    @default("PENDING")
+  accountType  String
+  accountInfo  String?
+  remark       String?
+  reviewedBy   Int?
+  reviewer     User?     @relation("WithdrawalReviewer", fields: [reviewedBy], references: [id])
+  reviewedAt   DateTime?
   rejectReason String?
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
 }
 
 model EmergencyAlert {
-  id          Int             @id @default(autoincrement())
-  userId      Int
-  user        User            @relation(fields: [userId], references: [id])
-  serviceId   Int?
-  service     ServiceListing? @relation("ServiceEmergencies", fields: [serviceId], references: [id])
-  type        String
-  description String?
-  photos      String?
-  status      String          @default("PENDING")
-  handledBy   Int?
-  handler     User?           @relation("EmergencyHandler", fields: [handledBy], references: [id])
-  handledAt   DateTime?
+  id           Int             @id @default(autoincrement())
+  userId       Int
+  user         User            @relation(fields: [userId], references: [id])
+  serviceId    Int?
+  service      ServiceListing? @relation("ServiceEmergencies", fields: [serviceId], references: [id])
+  type         String
+  description  String?
+  photos       String?
+  status       String          @default("PENDING")
+  handledBy    Int?
+  handler      User?           @relation("EmergencyHandler", fields: [handledBy], references: [id])
+  handledAt    DateTime?
   handlingNote String?
-  createdAt   DateTime        @default(now())
+  createdAt    DateTime        @default(now())
 }
 
 model ServicePhoto {
-  id        Int             @id @default(autoincrement())
+  id        Int            @id @default(autoincrement())
   serviceId Int
-  service   ServiceListing  @relation(fields: [serviceId], references: [id])
+  service   ServiceListing @relation(fields: [serviceId], references: [id])
   url       String
   type      String
   note      String?
-  createdAt DateTime        @default(now())
+  createdAt DateTime       @default(now())
 }
 
 model FavoriteSitter {
@@ -282,7 +288,7 @@ model MedicalRecord {
   id          Int      @id @default(autoincrement())
   petId       Int
   pet         Pet      @relation(fields: [petId], references: [id])
-  type        String   // vaccination, vet_visit, medication, other
+  type        String // vaccination, vet_visit, medication, other
   title       String
   description String?
   date        DateTime
@@ -293,24 +299,24 @@ model MedicalRecord {
 }
 
 model AdminLog {
-  id        Int      @id @default(autoincrement())
-  adminId   Int
-  admin     User     @relation(fields: [adminId], references: [id])
-  action    String
+  id         Int      @id @default(autoincrement())
+  adminId    Int
+  admin      User     @relation(fields: [adminId], references: [id])
+  action     String
   targetType String
-  targetId  Int?
-  detail    String?
-  createdAt DateTime @default(now())
+  targetId   Int?
+  detail     String?
+  createdAt  DateTime @default(now())
 }
 
 model SystemNotification {
-  id        Int      @id @default(autoincrement())
-  title     String
-  content   String?
+  id         Int      @id @default(autoincrement())
+  title      String
+  content    String?
   targetRole String?
-  sentBy    Int
-  sender    User     @relation(fields: [sentBy], references: [id])
-  createdAt DateTime @default(now())
+  sentBy     Int
+  sender     User     @relation(fields: [sentBy], references: [id])
+  createdAt  DateTime @default(now())
 }
 
 model PlatformConfig {

@@ -1,33 +1,27 @@
 services:
-  postgres:
-    image: postgres:16-alpine
-    environment:
-      POSTGRES_USER: pet_user
-      POSTGRES_PASSWORD: pet_password
-      POSTGRES_DB: pet_service
+  redis:
+    image: redis:7-alpine
+    container_name: pet-redis
     ports:
-      - "5432:5432"
-    volumes:
-      - pgdata:/var/lib/postgresql/data
-    healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U pet_user -d pet_service"]
-      interval: 5s
-      timeout: 5s
-      retries: 5
+      - "6379:6379"
     restart: unless-stopped
+    networks:
+      - pet-network
 
   backend:
     build: ./backend
     ports:
       - "3001:3001"
     environment:
-      DATABASE_URL: postgresql://pet_user:pet_password@postgres:5432/pet_service
+      DATABASE_URL: postgresql://pet_user:pet_password@postgres:5432/pet_service?connection_limit=50
       JWT_SECRET: pet-service-jwt-secret-2026
       PORT: 3001
+      REDIS_URL: redis://redis:6379
     depends_on:
-      postgres:
-        condition: service_healthy
+      - redis
     restart: unless-stopped
+    networks:
+      - pet-network
 
   frontend:
     build: ./frontend
@@ -36,6 +30,8 @@ services:
     depends_on:
       - backend
     restart: unless-stopped
+    networks:
+      - pet-network
 
   nginx:
     image: nginx:alpine
@@ -47,6 +43,9 @@ services:
       - frontend
       - backend
     restart: unless-stopped
+    networks:
+      - pet-network
 
-volumes:
-  pgdata:
+networks:
+  pet-network:
+    external: true

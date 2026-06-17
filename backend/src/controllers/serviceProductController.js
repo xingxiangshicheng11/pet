@@ -1,6 +1,5 @@
-import { PrismaClient } from "@prisma/client";
 import bcrypt from "bcryptjs";
-const prisma = new PrismaClient();
+import prisma from '../utils/prisma.js';
 
 export async function createProduct(req, res) {
   try {

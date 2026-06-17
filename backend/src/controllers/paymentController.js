@@ -1,6 +1,5 @@
 import bcrypt from 'bcryptjs';
-import { PrismaClient } from "@prisma/client";
-const prisma = new PrismaClient();
+import prisma from '../utils/prisma.js';
 
 export async function createPayment(req, res) {
   try {

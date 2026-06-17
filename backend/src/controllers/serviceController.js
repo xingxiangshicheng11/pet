@@ -1,5 +1,5 @@
-import { PrismaClient } from "@prisma/client";
-const prisma = new PrismaClient();
+import prisma from '../utils/prisma.js';
+import redis from '../utils/redis.js';
 
 export async function createService(req, res) {
   try {
@@ -16,6 +16,10 @@ export async function createService(req, res) {
 
 export async function listServices(req, res) {
   try {
+    const page = Math.max(1, +req.query.page || 1);
+    const size = Math.min(Math.max(1, +req.query.size || 20), 100);
+    const skip = (page - 1) * size;
+
     const where = {};
     if (req.query.status) where.status = req.query.status;
     if (req.query.ownerId) {
@@ -28,11 +32,15 @@ export async function listServices(req, res) {
         where.status = 'OPEN';
       }
     }
-    const services = await prisma.serviceListing.findMany({
-      where, include: { owner: { select: { id: true, name: true, avatar: true } }, pet: true, sitter: { select: { id: true, name: true } }, reviews: { include: { reviewer: { select: { id: true, name: true } } } } },
-      orderBy: { createdAt: "desc" },
-    });
-    res.json(services);
+    const [services, total] = await Promise.all([
+      prisma.serviceListing.findMany({
+        where, include: { owner: { select: { id: true, name: true, avatar: true } }, pet: true, sitter: { select: { id: true, name: true } }, reviews: { include: { reviewer: { select: { id: true, name: true } } } } },
+        orderBy: { createdAt: "desc" },
+        skip, take: size,
+      }),
+      prisma.serviceListing.count({ where }),
+    ]);
+    res.json({ services, total, page, size, totalPages: Math.ceil(total / size) });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
@@ -117,6 +125,12 @@ export async function nearbyServices(req, res) {
       return res.status(400).json({ error: "lat and lng query params required" });
     }
 
+    const cacheKey = `nearby:${userLat}:${userLng}:${searchRadius}`;
+    if (redis) {
+      const cached = await redis.get(cacheKey);
+      if (cached) return res.json(JSON.parse(cached));
+    }
+
     const rows = await prisma.$queryRawUnsafe(`
       SELECT id, distance FROM (
         SELECT id,
@@ -150,6 +164,8 @@ export async function nearbyServices(req, res) {
     const result = services
       .map(s => ({ ...s, distance: distMap[s.id] }))
       .sort((a, b) => (distMap[a.id] || 0) - (distMap[b.id] || 0));
+
+    if (redis) await redis.setex(cacheKey, 10, JSON.stringify(result));
 
     res.json(result);
   } catch (err) {

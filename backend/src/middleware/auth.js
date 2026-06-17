@@ -1,8 +1,6 @@
 import jwt from 'jsonwebtoken';
-import { PrismaClient } from '@prisma/client';
 import config from '../config/index.js';
-
-const prisma = new PrismaClient();
+import prisma from '../utils/prisma.js';
 
 // 验证 Access Token (标准认证)
 export async function authenticate(req, res, next) {

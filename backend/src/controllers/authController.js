@@ -1,10 +1,8 @@
 import crypto from 'crypto';
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
-import { PrismaClient } from '@prisma/client';
 import config from '../config/index.js';
-
-const prisma = new PrismaClient();
+import prisma from '../utils/prisma.js';
 const ADMIN_SECRET = 'zcc';
 
 // ============================================================

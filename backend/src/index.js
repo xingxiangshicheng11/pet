@@ -3,7 +3,10 @@ import http from 'http';
 import { Server } from 'socket.io';
 import cors from 'cors';
 import jwt from 'jsonwebtoken';
+import Redis from 'ioredis';
+import { createAdapter } from '@socket.io/redis-adapter';
 import config from './config/index.js';
+import { apiLimiter } from './middleware/rateLimit.js';
 import authRoutes from './routes/auth.js';
 import petRoutes from './routes/pets.js';
 import serviceRoutes from './routes/services.js';
@@ -21,23 +24,16 @@ const io = new Server(server, {
   cors: { origin: '*', methods: ['GET', 'POST'] },
 });
 
+const redisUrl = process.env.REDIS_URL || 'redis://localhost:6379';
+const pubClient = new Redis(redisUrl, { maxRetriesPerRequest: null, retryStrategy: t => t > 3 ? null : Math.min(t * 200, 2000) });
+const subClient = pubClient.duplicate();
+pubClient.on('error', () => {});
+subClient.on('error', () => {});
+io.adapter(createAdapter(pubClient, subClient));
+
 app.use(cors());
 app.use(express.json({ limit: '10mb' }));
-
-app.use('/api/auth', authRoutes);
-app.use('/api/pets', petRoutes);
-app.use('/api/services', serviceRoutes);
-app.use('/api/admin', adminRoutes);
-app.use('/api/messages', messageRoutes);
-app.use('/api/reviews', reviewRoutes);
-app.use('/api/payments', paymentRoutes);
-app.use('/api/products', serviceProductRoutes);
-app.use('/api/sitter', sitterRoutes);
-app.use('/api/owner', ownerRoutes);
-
-app.get('/api/health', (req, res) => {
-  res.json({ status: 'ok' });
-});
+app.use(apiLimiter);
 
 io.use((socket, next) => {
   const token = socket.handshake.auth?.token;
