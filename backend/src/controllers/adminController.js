@@ -1,4 +1,5 @@
 import prisma from '../utils/prisma.js';
+import { notificationQueue } from '../jobs/queue.js';
 
 async function log(adminId, action, targetType, targetId, detail) {
   await prisma.adminLog.create({ data: { adminId, action, targetType, targetId, detail } });
@@ -183,30 +184,43 @@ export async function adminAssignSitter(req, res) {
 // ─── Stats ────────────────────────────────────────────
 export async function getAdminStats(req, res) {
   try {
-    const [users, services, payments, withdrawals] = await Promise.all([
-      prisma.user.findMany({ select: { roles: true, createdAt: true } }),
-      prisma.serviceListing.findMany({ select: { status: true, price: true, createdAt: true, updatedAt: true } }),
-      prisma.payment.findMany({ where: { status: 'COMPLETED' }, select: { amount: true, paidAt: true } }),
-      prisma.withdrawal.findMany({ where: { status: 'PENDING' }, select: { amount: true } }),
+    const [userRoles, serviceStats, paymentAgg, withdrawalAgg] = await Promise.all([
+      prisma.user.groupBy({ by: ['roles'], _count: true }),
+      prisma.serviceListing.groupBy({ by: ['status'], _count: true, _sum: { price: true } }),
+      prisma.payment.aggregate({ where: { status: 'COMPLETED' }, _count: true, _sum: { amount: true } }),
+      prisma.withdrawal.aggregate({ where: { status: 'PENDING' }, _count: true, _sum: { amount: true } }),
     ]);
-    const roles = users.map(u => u.roles);
-    const completed = services.filter(s => s.status === 'COMPLETED');
-    const pendingWithdrawals = withdrawals.length;
-    const pendingWithdrawalAmount = withdrawals.reduce((s, w) => s + w.amount, 0);
+
+    let totalOwners = 0, totalSitters = 0, totalAdmins = 0;
+    for (const row of userRoles) {
+      const r = row.roles;
+      if (r.includes('OWNER')) totalOwners += row._count;
+      if (r.includes('SITTER')) totalSitters += row._count;
+      if (r.includes('ADMIN')) totalAdmins += row._count;
+    }
+
+    let completedServices = 0, activeServices = 0, cancelledServices = 0;
+    let totalRevenue = 0;
+    for (const row of serviceStats) {
+      if (row.status === 'COMPLETED') { completedServices += row._count; totalRevenue += row._sum.price || 0; }
+      else if (['OPEN', 'ACCEPTED', 'IN_PROGRESS'].includes(row.status)) activeServices += row._count;
+      else if (row.status === 'CANCELLED') cancelledServices += row._count;
+    }
+
     res.json({
-      totalUsers: users.length,
-      totalOwners: roles.filter(r => r.includes('OWNER')).length,
-      totalSitters: roles.filter(r => r.includes('SITTER')).length,
-      totalAdmins: roles.filter(r => r.includes('ADMIN')).length,
-      totalServices: services.length,
-      completedServices: completed.length,
-      activeServices: services.filter(s => ['OPEN', 'ACCEPTED', 'IN_PROGRESS'].includes(s.status)).length,
-      cancelledServices: services.filter(s => s.status === 'CANCELLED').length,
-      totalRevenue: completed.reduce((s, x) => s + x.price, 0),
-      totalPayments: payments.length,
-      totalPaymentAmount: payments.reduce((s, p) => s + p.amount, 0),
-      pendingWithdrawals,
-      pendingWithdrawalAmount,
+      totalUsers: userRoles.reduce((s, r) => s + r._count, 0),
+      totalOwners,
+      totalSitters,
+      totalAdmins,
+      totalServices: serviceStats.reduce((s, r) => s + r._count, 0),
+      completedServices,
+      activeServices,
+      cancelledServices,
+      totalRevenue,
+      totalPayments: paymentAgg._count,
+      totalPaymentAmount: paymentAgg._sum.amount || 0,
+      pendingWithdrawals: withdrawalAgg._count,
+      pendingWithdrawalAmount: withdrawalAgg._sum.amount || 0,
     });
   } catch (err) {
     res.status(500).json({ error: err.message });
@@ -218,35 +232,50 @@ export async function getAdminTrends(req, res) {
     const months = +req.query.months || 12;
     const startDate = new Date();
     startDate.setMonth(startDate.getMonth() - months);
-    const [services, payments] = await Promise.all([
-      prisma.serviceListing.findMany({ where: { createdAt: { gte: startDate } }, select: { price: true, status: true, createdAt: true } }),
-      prisma.payment.findMany({ where: { status: 'COMPLETED', paidAt: { gte: startDate } }, select: { amount: true, paidAt: true } }),
+
+    const [serviceRows, paymentRows] = await Promise.all([
+      prisma.$queryRaw`
+        SELECT
+          to_char(date_trunc('month', "createdAt"), 'YYYY-MM') as month,
+          COUNT(*)::int as services,
+          COUNT(*) FILTER (WHERE status = 'COMPLETED')::int as completed
+        FROM "ServiceListing"
+        WHERE "createdAt" >= ${startDate}
+        GROUP BY month ORDER BY month
+      `,
+      prisma.$queryRaw`
+        SELECT
+          to_char(date_trunc('month', "paidAt"), 'YYYY-MM') as month,
+          COALESCE(SUM(amount), 0) as revenue,
+          COUNT(*)::int as payments
+        FROM "Payment"
+        WHERE status = 'COMPLETED' AND "paidAt" >= ${startDate}
+        GROUP BY month ORDER BY month
+      `,
     ]);
-    const monthlyData = {};
+
     const now = new Date();
-    for (let i = 0; i < months; i++) {
+    const monthlyData = {};
+    for (let i = months - 1; i >= 0; i--) {
       const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
       const key = d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0');
       monthlyData[key] = { month: key, services: 0, completed: 0, revenue: 0, payments: 0 };
     }
-    services.forEach(s => {
-      const d = new Date(s.createdAt);
-      const key = d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0');
-      if (monthlyData[key]) {
-        monthlyData[key].services++;
-        if (s.status === 'COMPLETED') monthlyData[key].completed++;
+
+    for (const row of serviceRows) {
+      if (monthlyData[row.month]) {
+        monthlyData[row.month].services = Number(row.services);
+        monthlyData[row.month].completed = Number(row.completed);
       }
-    });
-    payments.forEach(p => {
-      if (!p.paidAt) return;
-      const d = new Date(p.paidAt);
-      const key = d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0');
-      if (monthlyData[key]) {
-        monthlyData[key].payments += p.amount;
-        monthlyData[key].revenue += p.amount;
+    }
+    for (const row of paymentRows) {
+      if (monthlyData[row.month]) {
+        monthlyData[row.month].revenue = Number(row.revenue);
+        monthlyData[row.month].payments = Number(row.payments);
       }
-    });
-    res.json(Object.values(monthlyData).reverse());
+    }
+
+    res.json(Object.values(monthlyData));
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
@@ -254,16 +283,16 @@ export async function getAdminTrends(req, res) {
 
 export async function getAdminCategoryStats(req, res) {
   try {
-    const services = await prisma.serviceListing.findMany({
+    const rows = await prisma.serviceListing.groupBy({
+      by: ['category'],
       where: { status: 'COMPLETED' },
-      select: { category: true, price: true },
+      _count: { category: true },
+      _sum: { price: true },
     });
     const catData = {};
-    services.forEach(s => {
-      if (!catData[s.category]) catData[s.category] = { count: 0, revenue: 0 };
-      catData[s.category].count++;
-      catData[s.category].revenue += s.price;
-    });
+    for (const row of rows) {
+      catData[row.category] = { count: row._count.category, revenue: row._sum.price || 0 };
+    }
     res.json(catData);
   } catch (err) {
     res.status(500).json({ error: err.message });
@@ -469,11 +498,15 @@ export async function sendSystemNotification(req, res) {
     const notif = await prisma.systemNotification.create({
       data: { title, content, targetRole, sentBy: req.user.id },
     });
-    const io = req.app.get('io');
     if (targetRole) {
-      io.to(targetRole.toLowerCase() + 's').emit('notification', { title, content, type: 'system' });
+      notificationQueue.add('system_notify', {
+        event: 'notification', room: targetRole.toLowerCase() + 's',
+        data: { title, content, type: 'system' },
+      });
     } else {
-      io.emit('notification', { title, content, type: 'system' });
+      notificationQueue.add('system_notify_all', {
+        event: 'notification', data: { title, content, type: 'system' },
+      });
     }
     if (targetRole) {
       const users = await prisma.user.findMany({ where: { roles: { contains: targetRole } } });

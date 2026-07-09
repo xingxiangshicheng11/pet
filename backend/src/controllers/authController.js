@@ -85,85 +85,76 @@ function userResponse(user) {
 }
 
 // ============================================================
-// 安全措施 3: 登录限流 + 账号锁定 (内存版)
+// 安全措施 3: 登录限流 + 账号锁定 (Redis 版)
 // ============================================================
-// 用 Map 做限流计数 (生产环境应改用 Redis)
-// 结构: key → { attempts: [timestamps], locked: timestamp|null }
-const rateLimitStore = new Map();
+// 结构: key → JSON { count: number, locked: timestamp|null }
+// 用 Redis 替代 Map，确保多进程 / 多实例共享限流状态
+import redis from '../utils/redis.js';
 
-// 每 5 分钟清理一次过期记录
-setInterval(() => {
-  const now = Date.now();
-  for (const [key, data] of rateLimitStore) {
-    // 清理旧尝试记录
-    data.attempts = data.attempts.filter(t => t > now - 900000);
-    if (data.attempts.length === 0 && !data.locked) {
-      rateLimitStore.delete(key);
-    }
-    // 清理已解锁的锁定
-    if (data.locked && data.locked < now - 1800000) {
-      rateLimitStore.delete(key);
-    }
-  }
-}, 300000);
+const WINDOW_SEC = 900;         // 15 分钟窗口
+const LOCK_SEC = 1800;          // 30 分钟锁定
+const MAX_ATTEMPTS = 5;         // 5 次触发锁定
 
-function checkRateLimit(userId, ip) {
-  const now = Date.now();
-  const keys = [
-    `login:user:${userId}`,
-    `login:ip:${ip}`,
-  ];
+function makeKeys(userId, ip) {
+  return {
+    userKey: `login:user:${userId}`,
+    ipKey: `login:ip:${ip}`,
+  };
+}
 
-  for (const key of keys) {
-    if (!rateLimitStore.has(key)) {
-      rateLimitStore.set(key, { attempts: [], locked: null });
-    }
-    const data = rateLimitStore.get(key);
+async function checkRateLimit(userId, ip) {
+  const { userKey, ipKey } = makeKeys(userId, ip);
+
+  for (const key of [userKey, ipKey]) {
+    const raw = await redis.get(key);
+    if (!raw) continue;
+
+    const data = JSON.parse(raw);
 
     // 检查是否被锁定
     if (data.locked) {
-      const lockDuration = 30 * 60 * 1000; // 30 分钟
-      if (now - data.locked < lockDuration) {
-        const retryAfter = Math.ceil((data.locked + lockDuration - now) / 1000);
+      const elapsed = Date.now() - data.locked;
+      if (elapsed < LOCK_SEC * 1000) {
+        const retryAfter = Math.ceil((LOCK_SEC * 1000 - elapsed) / 1000);
         return { allowed: false, retryAfter };
-      } else {
-        // 锁定时间已过，解锁
-        data.locked = null;
-        data.attempts = [];
       }
+      // 锁定时间已过，删除 key 重新计数
+      await redis.del(key);
+      continue;
     }
 
-    // 清除窗口外的旧记录
-    const windowMs = 15 * 60 * 1000; // 15 分钟
-    data.attempts = data.attempts.filter(t => t > now - windowMs);
-
-    // 检查是否超过阈值 (5 次)
-    if (data.attempts.length >= 5) {
-      data.locked = now;
-      return { allowed: false, retryAfter: 1800, locked: true };
+    // 检查是否超过阈值
+    if (data.count >= MAX_ATTEMPTS) {
+      data.locked = Date.now();
+      await redis.psetex(key, LOCK_SEC * 1000, JSON.stringify(data));
+      return { allowed: false, retryAfter: LOCK_SEC, locked: true };
     }
   }
 
   return { allowed: true };
 }
 
-function recordAttempt(userId, ip) {
-  const now = Date.now();
-  const keys = [
-    `login:user:${userId}`,
-    `login:ip:${ip}`,
-  ];
-  for (const key of keys) {
-    if (!rateLimitStore.has(key)) {
-      rateLimitStore.set(key, { attempts: [], locked: null });
+async function recordAttempt(userId, ip) {
+  const { userKey, ipKey } = makeKeys(userId, ip);
+
+  for (const key of [userKey, ipKey]) {
+    const count = await redis.incr(key);
+    if (count === 1) {
+      // 首次尝试，设 TTL
+      await redis.expire(key, WINDOW_SEC);
     }
-    rateLimitStore.get(key).attempts.push(now);
+    // 存完整数据结构（含 locked 状态，count 用于阈值判断）
+    const raw = await redis.get(key);
+    let data = raw ? JSON.parse(raw) : { count, locked: null };
+    data.count = count;
+    await redis.psetex(key, WINDOW_SEC * 1000, JSON.stringify(data));
   }
 }
 
-function clearRateLimit(userId, ip) {
-  rateLimitStore.delete(`login:user:${userId}`);
-  rateLimitStore.delete(`login:ip:${ip}`);
+async function clearRateLimit(userId, ip) {
+  const { userKey, ipKey } = makeKeys(userId, ip);
+  await redis.del(userKey);
+  await redis.del(ipKey);
 }
 
 // ============================================================
@@ -233,7 +224,7 @@ export async function login(req, res) {
 
     // 安全措施 3: 限流检查
     if (user) {
-      const limit = checkRateLimit(user.id, ip);
+      const limit = await checkRateLimit(user.id, ip);
       if (!limit.allowed) {
         if (limit.locked) {
           return res.status(429).json({
@@ -258,14 +249,14 @@ export async function login(req, res) {
     const valid = await bcrypt.compare(password, user.password);
     if (!valid) {
       // 记录失败尝试
-      recordAttempt(user.id, ip);
+      await recordAttempt(user.id, ip);
       return res.status(401).json({ error: '密码错误' });
     }
 
     if (!user.isActive) return res.status(403).json({ error: '该账号已被禁用' });
 
     // 登录成功 → 清限流
-    clearRateLimit(user.id, ip);
+    await clearRateLimit(user.id, ip);
 
     // tokenVersion +1：旧 token 立即失效
     const updatedUser = await prisma.user.update({

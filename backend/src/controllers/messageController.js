@@ -37,6 +37,9 @@ export async function getMessages(req, res) {
   try {
     const orderId = req.params.orderId;
     const productOrderId = req.query.productOrderId ? +req.query.productOrderId : null;
+    const page = Math.max(1, +req.query.page || 1);
+    const limit = Math.min(100, Math.max(1, +req.query.limit || 50));
+    const skip = (page - 1) * limit;
 
     if (orderId && orderId !== '0') {
       const service = await prisma.serviceListing.findUnique({ where: { id: +orderId } });
@@ -47,12 +50,17 @@ export async function getMessages(req, res) {
     }
 
     const where = productOrderId ? { productOrderId } : { orderId: +req.params.orderId };
-    const messages = await prisma.message.findMany({
-      where,
-      include: { sender: { select: { id: true, name: true } } },
-      orderBy: { createdAt: "asc" },
-    });
-    res.json(messages);
+    const [messages, total] = await Promise.all([
+      prisma.message.findMany({
+        where,
+        include: { sender: { select: { id: true, name: true } } },
+        orderBy: { createdAt: "desc" },
+        take: limit,
+        skip,
+      }),
+      prisma.message.count({ where }),
+    ]);
+    res.json({ messages: messages.reverse(), total, page, limit, hasMore: skip + limit < total });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }

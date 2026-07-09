@@ -1,6 +1,6 @@
-FROM node:20-alpine
+FROM --platform=$TARGETPLATFORM node:20-alpine
 
-RUN apk add --no-cache openssl
+RUN apk add --no-cache openssl curl
 
 WORKDIR /app
 
@@ -13,6 +13,8 @@ RUN npx prisma generate
 COPY . .
 
 RUN chmod +x start.sh
+
+RUN npm install -g pm2
 
 EXPOSE 3001
 

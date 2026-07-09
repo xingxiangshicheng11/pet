@@ -7,6 +7,7 @@ import Redis from 'ioredis';
 import { createAdapter } from '@socket.io/redis-adapter';
 import config from './config/index.js';
 import { apiLimiter } from './middleware/rateLimit.js';
+import { startWorkers } from './jobs/worker.js';
 import authRoutes from './routes/auth.js';
 import petRoutes from './routes/pets.js';
 import serviceRoutes from './routes/services.js';
@@ -34,6 +35,21 @@ io.adapter(createAdapter(pubClient, subClient));
 app.use(cors());
 app.use(express.json({ limit: '10mb' }));
 app.use(apiLimiter);
+
+app.use('/api/auth', authRoutes);
+app.use('/api/pets', petRoutes);
+app.use('/api/services', serviceRoutes);
+app.use('/api/admin', adminRoutes);
+app.use('/api/messages', messageRoutes);
+app.use('/api/reviews', reviewRoutes);
+app.use('/api/payments', paymentRoutes);
+app.use('/api/products', serviceProductRoutes);
+app.use('/api/sitter', sitterRoutes);
+app.use('/api/owner', ownerRoutes);
+
+app.get('/api/health', (req, res) => {
+  res.json({ status: 'ok' });
+});
 
 io.use((socket, next) => {
   const token = socket.handshake.auth?.token;
@@ -67,6 +83,8 @@ io.on('connection', (socket) => {
 });
 
 app.set('io', io);
+
+startWorkers(io);
 
 server.listen(config.port, () => {
   console.log('Server running on port ' + config.port);

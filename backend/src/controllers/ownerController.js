@@ -1,4 +1,5 @@
 import prisma from '../utils/prisma.js';
+import { adminAlertQueue, notificationQueue } from '../jobs/queue.js';
 
 export async function getOwnerNotifications(req, res) {
   try {
@@ -31,14 +32,13 @@ export async function createOwnerEmergency(req, res) {
     const alert = await prisma.emergencyAlert.create({
       data: { userId: req.user.id, serviceId: serviceId ? +serviceId : null, type, description, photos },
     });
-    const io = req.app.get('io');
-    io.to('admin').emit('admin:alert', { type: 'emergency', alert });
+    adminAlertQueue.add('emergency', { event: 'admin:alert', room: 'admin', data: { type: 'emergency', alert } });
     if (serviceId) {
       const service = await prisma.serviceListing.findUnique({ where: { id: +serviceId } });
       if (service?.sitterId) {
-        io.to('user:' + service.sitterId).emit('notification', {
-          title: '紧急求助',
-          content: description || '宠物主发起了紧急求助',
+        notificationQueue.add('emergency_notify', {
+          event: 'notification', room: 'user:' + service.sitterId,
+          data: { title: '紧急求助', content: description || '宠物主发起了紧急求助' },
         });
       }
     }

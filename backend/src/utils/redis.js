@@ -11,6 +11,7 @@ try {
       if (times > 3) return null;
       return Math.min(times * 200, 2000);
     },
+    lazyConnect: true,
   });
   client.on('error', () => {});
 } catch {
@@ -33,4 +34,34 @@ export async function setex(key, ttl, value) {
   } catch {}
 }
 
-export default { get, setex };
+export async function del(key) {
+  if (!client) return;
+  try {
+    await client.del(key);
+  } catch {}
+}
+
+export async function incr(key) {
+  if (!client) return null;
+  try {
+    return await client.incr(key);
+  } catch {
+    return null;
+  }
+}
+
+export async function expire(key, ttl) {
+  if (!client) return;
+  try {
+    await client.expire(key, ttl);
+  } catch {}
+}
+
+export async function psetex(key, ttlMs, value) {
+  if (!client) return;
+  try {
+    await client.psetex(key, ttlMs, value);
+  } catch {}
+}
+
+export default { get, setex, del, incr, expire, psetex };

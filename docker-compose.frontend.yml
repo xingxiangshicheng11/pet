@@ -1,0 +1,25 @@
+services:
+  frontend:
+    build: ./frontend
+    container_name: pet-frontend
+    restart: unless-stopped
+    networks:
+      - pet-network
+
+  nginx:
+    image: nginx:alpine
+    container_name: pet-nginx
+    ports:
+      - "8080:8080"
+    volumes:
+      - ./nginx/default.conf:/etc/nginx/conf.d/default.conf
+    depends_on:
+      - frontend
+    restart: unless-stopped
+    networks:
+      - pet-network
+
+networks:
+  pet-network:
+    name: pet-network
+    driver: bridge

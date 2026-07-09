@@ -1,5 +1,6 @@
 import prisma from '../utils/prisma.js';
 import redis from '../utils/redis.js';
+import { adminAlertQueue } from '../jobs/queue.js';
 
 export async function createService(req, res) {
   try {
@@ -7,7 +8,7 @@ export async function createService(req, res) {
     const service = await prisma.serviceListing.create({ data, include: { owner: { select: { id: true, name: true } }, pet: true } });
     const io = req.app.get("io");
     io.to("sitters").emit("service:new", service);
-    io.to("admin").emit("admin:alert", { type: "service_new", service });
+    adminAlertQueue.add('service_new', { event: 'admin:alert', room: 'admin', data: { type: 'service_new', service } });
     res.status(201).json(service);
   } catch (err) {
     res.status(500).json({ error: err.message });
@@ -74,7 +75,7 @@ export async function acceptService(req, res) {
     });
     const io = req.app.get("io");
     io.to(`user:${updated.ownerId}`).emit("service:accepted", updated);
-    io.to("admin").emit("admin:alert", { type: "service_accepted", service: updated });
+    adminAlertQueue.add('service_accepted', { event: 'admin:alert', room: 'admin', data: { type: 'service_accepted', service: updated } });
     res.json(updated);
   } catch (err) {
     res.status(500).json({ error: err.message });

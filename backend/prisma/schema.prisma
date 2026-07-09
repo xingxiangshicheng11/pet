@@ -92,6 +92,8 @@ model Pet {
 
   services       ServiceListing[]
   medicalRecords MedicalRecord[]
+
+  @@index([ownerId])
 }
 
 model ServiceProduct {
@@ -109,6 +111,9 @@ model ServiceProduct {
   updatedAt   DateTime @updatedAt
 
   orders ProductOrder[]
+
+  @@index([sitterId])
+  @@index([isActive, category])
 }
 
 model ProductOrder {
@@ -124,6 +129,9 @@ model ProductOrder {
   createdAt     DateTime       @default(now())
   updatedAt     DateTime       @updatedAt
   messages      Message[]
+
+  @@index([productId])
+  @@index([buyerId])
 }
 
 model ServiceListing {
@@ -160,6 +168,7 @@ model ServiceListing {
   @@index([status, createdAt])
   @@index([ownerId])
   @@index([sitterId])
+  @@index([status, latitude, longitude])
 }
 
 enum ServiceStatus {
@@ -184,6 +193,7 @@ model Review {
   createdAt  DateTime       @default(now())
 
   @@unique([orderId, reviewerId])
+  @@index([revieweeId])
 }
 
 model Message {
@@ -202,6 +212,8 @@ model Message {
 
   @@index([orderId, createdAt])
   @@index([receiverId])
+  @@index([senderId])
+  @@index([productOrderId])
 }
 
 model Notification {
@@ -214,6 +226,8 @@ model Notification {
   read      Boolean  @default(false)
   link      String?
   createdAt DateTime @default(now())
+
+  @@index([userId, createdAt])
 }
 
 model Payment {
@@ -225,8 +239,10 @@ model Payment {
   status        PaymentStatus  @default(PENDING)
   transactionId String?
   paidAt        DateTime?
-  createdAt     DateTime       @default(now())
-  updatedAt     DateTime       @updatedAt
+  createdAt DateTime       @default(now())
+  updatedAt DateTime       @updatedAt
+
+  @@index([orderId])
 }
 
 model Withdrawal {
@@ -243,7 +259,10 @@ model Withdrawal {
   reviewedAt   DateTime?
   rejectReason String?
   createdAt    DateTime  @default(now())
-  updatedAt    DateTime  @updatedAt
+  updatedAt DateTime  @updatedAt
+
+  @@index([userId])
+  @@index([status, createdAt])
 }
 
 model EmergencyAlert {
@@ -260,7 +279,9 @@ model EmergencyAlert {
   handler      User?           @relation("EmergencyHandler", fields: [handledBy], references: [id])
   handledAt    DateTime?
   handlingNote String?
-  createdAt    DateTime        @default(now())
+  createdAt DateTime @default(now())
+
+  @@index([status, createdAt])
 }
 
 model ServicePhoto {
@@ -271,6 +292,8 @@ model ServicePhoto {
   type      String
   note      String?
   createdAt DateTime       @default(now())
+
+  @@index([serviceId])
 }
 
 model FavoriteSitter {
@@ -296,6 +319,8 @@ model MedicalRecord {
   notes       String?
   attachment  String?
   createdAt   DateTime @default(now())
+
+  @@index([petId])
 }
 
 model AdminLog {
@@ -307,6 +332,8 @@ model AdminLog {
   targetId   Int?
   detail     String?
   createdAt  DateTime @default(now())
+
+  @@index([action, targetType, createdAt])
 }
 
 model SystemNotification {
@@ -317,6 +344,8 @@ model SystemNotification {
   sentBy     Int
   sender     User     @relation(fields: [sentBy], references: [id])
   createdAt  DateTime @default(now())
+
+  @@index([targetRole, createdAt])
 }
 
 model PlatformConfig {
